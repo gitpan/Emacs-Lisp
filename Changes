@@ -66,3 +66,10 @@ Perlification of Lisp lists.
 
 0.80  Sun Mar  7 01:24:25 EST 1999
 	Removed broken Emacs::Lisp::Plist::DELETE.
+
+0.83  
+	Update for Perlmacs 0.8.  Leave numbers 0.81 and 0.82 open as
+insurance.
+	Changed the semantics of argument and return value passing a
+bit.  Use the Emacs::Lisp::Object namespace instead of the Emacs::Lisp
+namespace for getting genuine, unconverted Lisp objects.

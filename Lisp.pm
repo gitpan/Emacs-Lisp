@@ -4,7 +4,7 @@
 
 package Emacs::Lisp;
 
-use 5.005;  # This version requires Perlmacs 0.7, which requires 5.005.
+use 5.005;  # This version requires Perlmacs 0.8, which requires 5.005.
 use Carp;
 unless (defined (&Emacs::Lisp::Object::DESTROY)) {
   croak ("Emacs::Lisp can only be used by a perl embedded in GNU Emacs");
@@ -14,15 +14,40 @@ use strict;
 no strict 'refs';
 use vars qw ($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS $AUTOLOAD
 	     %EXPORT %ENV);
-my %special;
+my (%special);
 
 require Exporter;
 require DynaLoader;
 
 @ISA = qw (Exporter DynaLoader);
 
-$VERSION = '0.80';
+$VERSION = '0.83';
 bootstrap Emacs::Lisp $VERSION;
+
+
+package Emacs::Lisp::Object;
+
+use vars qw ($AUTOLOAD);
+
+# XXX This sub is (or should be!) textually identical to
+# Emacs::Lisp::AUTOLOAD below, but it calls the non-converting funcall.
+sub AUTOLOAD {
+  my $function = $AUTOLOAD;
+  $function =~ s/.*:://;
+  if (exists $special{$function}) {
+    my $msg = $special{$function};
+    $msg = $special{$1}
+      while $msg =~ /^\*(.*)/;
+    $msg = (defined ($msg) ? "; $msg" : "");
+    Carp::croak "`$function' not implemented$msg";
+  }
+  $function = \*{"::$function"};
+  *$AUTOLOAD = sub { &funcall ($function, @_) };
+  goto &$AUTOLOAD;
+}
+
+sub is_nil	($) { defined $_[0]->null->to_perl }
+#sub new		($$) { &to_lisp ($_[1]) }
 
 
 package Emacs::Lisp::Variable;
@@ -35,58 +60,85 @@ sub STORE	{ &Emacs::Lisp::set }
 package Emacs::Lisp::Plist;
 
 # tied hash interface to Lisp property lists
+# tie (%sym, 'Emacs::Lisp::Plist', \*::sym)
 
 sub TIEHASH	{ bless (\$_[1], $_[0]) }
 sub FETCH	{ &Emacs::Lisp::get (${$_[0]}, $_[1]) }
 sub STORE	{ &Emacs::Lisp::put (${$_[0]}, $_[1], $_[2]) }
 sub CLEAR	{ &Emacs::Lisp::setplist (${$_[0]}, undef) }
 
+# Look for $key (a Perl thing, typically a \*::globref) in all the
+# even-numbered positions (zero-based) in $list (a Lisp list).
+# If found, return the list's tail and the tail from one position
+# up (needed for DELETE).  If not found, return an empty list.
+#
+# Assumes $list has an even number of elts.
+# Should be called in list context.
 sub memq_even ($$) {
     my ($list, $key) = @_;
-    for (;
-	 defined ($list);
-	 $list = &Emacs::Lisp::cdr (&Emacs::Lisp::cdr ($list)))
+    my ($prev);
+    for (; not $list->is_nil; $list = ($prev = $list->cdr)->cdr)
     {
-	if (&Emacs::Lisp::eq (&Emacs::Lisp::car ($list), $key)) {
-	    return $list;
+	if (&Emacs::Lisp::eq ($list->car, $key)) {
+	    return ($list, $prev);
 	}
     }
-    return undef;
+    return ();
 }
 
 sub EXISTS {
     #     "[T]here is no distinction between a value of `nil'
     #     and the absence of the property."
     #
-    #     - *Note (elisp)Symbol Plists::. (Elisp Reference Manual)
+    #     - *Note (elisp)Symbol Plists::. (Elisp Manual)
     #
     # Well now there is.  :-)
     #
     my ($symbol, $key) = @_;
-    return defined (memq_even (&Emacs::Lisp::symbol_plist ($$symbol), $key));
+    return (memq_even
+	    (&Emacs::Lisp::Object::symbol_plist ($$symbol),
+	     $key))[0] ? 1 : 0;
 }
 
-sub DELETE { Carp::croak "DELETE not implemented for Emacs::Lisp::Plist" }
+sub DELETE {
+    my ($symbol, $key) = @_;
+    my ($plist, $list, $prev);
+
+    $plist = &Emacs::Lisp::Object::symbol_plist ($$symbol);
+    if ($plist->is_nil) {
+	return undef;
+    }
+    ($list, $prev) = memq_even ($plist, $key);
+    if ($list) {
+	if ($prev) {
+	    $prev->setcdr ($list->cdr->cdr);
+	} else {
+	    &Emacs::Lisp::setplist ($$symbol, $list->cdr->cdr);
+	}
+    }
+    return undef;
+}
 
 sub FIRSTKEY {
     my ($symbol) = @_;
     my ($plist);
-    $plist = &Emacs::Lisp::symbol_plist ($$symbol);
-    return defined $plist ? &Emacs::Lisp::car ($plist) : undef;
+    $plist = &Emacs::Lisp::Object::symbol_plist ($$symbol);
+    return $plist->is_nil ? undef : $plist->car->to_perl;
 }
 
 sub NEXTKEY {
     my ($symbol, $lastkey) = @_;
-    my ($list);
-    $list = &Emacs::Lisp::symbol_plist ($$symbol);
-    $list = memq_even (&Emacs::Lisp::symbol_plist ($$symbol), $lastkey);
-    if (defined ($list)) {
-	return (&Emacs::Lisp::car
-		(&Emacs::Lisp::cdr
-		 (&Emacs::Lisp::cdr ($list))));
-    } else {
-	return undef;
+    my ($plist, $list);
+    $plist = &Emacs::Lisp::Object::symbol_plist ($$symbol);
+    ($list) = memq_even ($plist, $lastkey);
+    if ($list) {
+	$list = $list->cdr->cdr;
+	if (not $list->is_nil) {
+	    # bad if nil is a key, I guess
+	    return $list->car->to_perl;
+	}
     }
+    return undef;
 }
 
 
@@ -102,12 +154,12 @@ use vars qw(%perl_env);
 sub Emacs::Lisp::setenv {
   my ($var, $val) = @_;
   $perl_env{$var} = $val;
-  &Emacs::Lisp::funcall(\*::setenv, @_);
+  &Emacs::Lisp::funcall (\*::setenv, @_);
 }
 
 sub TIEHASH	{ bless {}, $_[0] }
 sub FETCH	{ $perl_env{$_[1]} }
-sub STORE	{ &Emacs::Lisp::setenv($_[1], $_[2]) }
+sub STORE	{ &Emacs::Lisp::setenv ($_[1], $_[2]) }
 sub EXISTS	{ exists $perl_env{$_[1]} }
 sub FIRSTKEY	{ keys %perl_env; each %perl_env; }
 sub NEXTKEY	{ each %perl_env; }
@@ -143,7 +195,7 @@ sub import {
     }
     push @newlist, $_[$i];
   }
-  # XXX  Making use of some undocumented Exporter.pm behavior here...
+  # XXX  Accommodating some undocumented Exporter.pm behavior here...
   if (%EXPORT) {
     @EXPORT{@newlist} = (1) x @newlist;
   } else {
@@ -199,8 +251,7 @@ sub AUTOLOAD {
     croak "`$function' not implemented$msg";
   }
   $function = \*{"::$function"};
-  ### ugly hack "scalar", need to fix funcall
-  *$AUTOLOAD = sub { scalar (&funcall ($function, @_)) };
+  *$AUTOLOAD = sub { &funcall ($function, @_) };
   goto &$AUTOLOAD;
 }
 
@@ -276,7 +327,7 @@ sub defun ($$;$$) {
     }
   }
   push @form, [\*::apply, $body, \*::_Emacs__Lisp_args];
-  &fset($sym, [@form]);
+  &fset ($sym, [@form]);
   return $sym;
 }
 
@@ -309,8 +360,10 @@ Emacs::Lisp - Support for Perl embedded in GNU Emacs
 
 =head2 In Emacs
 
-  M-x load-library RET perl RET
   M-x perl-eval-expression RET 2+2 RET
+  M-x perl-eval-region RET
+  M-x perl-eval-buffer RET
+  ... and more...
 
 =head2 In Perl
 
@@ -326,7 +379,7 @@ Emacs::Lisp - Support for Perl embedded in GNU Emacs
 
   use Emacs::Lisp qw($emacs_version $perlmacs_version);
   save_excursion {
-    &set_buffer(&get_buffer_create("whatever"));
+    &set_buffer(&get_buffer_create("*test*"));
     &insert("This is Emacs version $emacs_version,\n");
     &insert("Perlmacs version $perlmacs_version.\n");
     &insert("Emacs::Lisp version is $Emacs::Lisp::VERSION.\n");
@@ -343,8 +396,8 @@ semantics.
 You still need to learn some Lisp in order to understand I<The Elisp
 Manual>, which you will need if you wish to learn about the details of
 Emacs programming.  Hopefully, this situation will be cured by the
-appearance of well-documented Perl modules that give everything in
-Emacs a nice, object-oriented wrapping.
+appearance of well-documented modules that give everything in Emacs a
+nice, object-oriented Perl wrapping.
 
 
 =head1 EMACS SUPPORT FOR PERL
@@ -357,6 +410,10 @@ or the command line, independently of the Emacs::Lisp module.
 Some Perl-related functions are built into Lisp.  Use C<C-h f
 E<lt>function-nameE<gt> RET> within Emacs for documentation on these.
 
+  perl-eval-expression	EXPRESSION
+  perl-eval-region	START END
+  perl-eval-buffer
+  perl-load-file	NAME
   perl-eval		STRING &optional CONTEXT
   perl-call		SUB &optional CONTEXT &rest ARGS
   make-perl-interpreter	&rest ARGV
@@ -365,30 +422,30 @@ E<lt>function-nameE<gt> RET> within Emacs for documentation on these.
   perl-run		&optional INTERPRETER
   perl-destruct		&optional INTERPRETER
 
-You need to do C<M-x load-library RET perl RET> (or hack your
-F<~/.emacs>) to get the following functions.
-
-  perl-eval-expression	EXPRESSION
-  perl-eval-region	START END
-  perl-eval-buffer
-  perl-load-file	NAME
-
-Caution: the exact meaning of C<perl-load-file> is a topic of research
-and may change.
-
 =head2 Data Conversions
 
 When data is passed between Lisp and Perl within Emacs, some basic
-principles apply.  These are goals that may never be entirely met, due
-to the differences between Perl and Lisp.
+principles apply.  These are goals that will never be entirely met,
+due to the differences between Perl and Lisp.
 
 =over 4
 
 =item * Whatever Perl gives to Lisp should get dereferenced once.
 
 A Perl reference gets converted into a Lisp reference to the thing
-referenced, not a Lisp reference to the Perl reference.  (I find this
-to be intuitively correct behavior.)
+referenced, not a Lisp reference to the Perl reference.  For example,
+this code
+
+  setq { $x = 16 };
+
+sets the Lisp variable C<x> to the I<Lisp> integer 16, whereas
+
+  setq { $x = \16 };
+
+sets it to an object of type C<perl-scalar> which holds a I<Perl>
+number 16.  I find this to be intuitively correct behavior.  See
+L</TO DO> for a (not yet implemented) way to override the default
+conversion.
 
 =item * As an exception to the previous rule, arrayrefs become lists.
 
@@ -410,8 +467,9 @@ in Lisp.
 This kind of conversion entails quite a bit of overhead and precludes
 "passing by reference" between the two languages, since it is a "deep"
 copying operation.  Changes made by Lisp to the list will not affect
-the Perl array of which it is a copy.  See L</TO DO> for a planned
-solution to this problem.
+the Perl array of which it is a copy.
+
+See L</TO DO> for a (not yet implemented) solution to this problem.
 
 =item * Converting a non-dereferenceable value requires some kind of
 primitive conversion.
@@ -735,24 +793,11 @@ same effect on Lisp as the above:
 
 =head1 BUGS
 
-There are quite a few bugs in Perlmacs and Emacs::Lisp.  These are
-some of the ones I know about.  See also the file F<src/BUGS> in the
-Perlmacs distribution.  If you find other bugs, please check that you
-have the latest version, and email me.
+These are some known bugs in Perlmacs and Emacs::Lisp.  See also the
+file F<BUGS> in the Perlmacs distribution.  If you find other bugs,
+please check that you have the latest version, and email me.
 
 =over 4
-
-=item * Crashes during goto
-
-This type of thing crashes or destabilizes Perl:
-
-    perlmacs -MEmacs::Lisp -le 'exit Emacs::main("test","-batch","-eval",q((perl-eval "goto foo;"))); foo:'
-
-    perlmacs -MEmacs::Lisp -le '&perl_eval(q(goto foo;)); foo:'
-
-=item * Possible memory leaks.
-
-I have not tested for memory leaks.
 
 =item * Problems with `Emacs::main'.
 
@@ -789,15 +834,26 @@ Perl and Emacs use environment variables and signal handlers in
 different, incompatible ways.  This needs to be coordinated.  I've
 made a start with %ENV, but more needs to be done.
 
+=item * Function arg names in online documentation.
+
+If you `defun' a function in Perl and later access its documentation
+using Emacs' builtin mechanism, it always says the argument list is
+`&rest -Emacs--Lisp-args'.
+
 =item * Probably can't use a coderef as an error handler or protected
 form.
 
 I think this will be easy to fix, I just haven't had the need yet.
 
 =item * A crash is likely if Perl code modifies the scalar value in an
-`Emacs::Lisp::Object' blessed reference.
+`Emacs::Lisp::Object' blessed reference or explicity calls DESTROY on
+it.
 
 Don't do that.
+
+=item * Possible memory leaks.
+
+I have not tested for memory leaks.
 
 =back
 
@@ -843,42 +899,13 @@ in principle by reimplementing Emacs' internals.
 
 =over 4
 
-=item * Special forms: let, catch, unwind-protect, condition-case,
-etc.
+=item * Special forms: let, catch, unwind-protect, etc.
 
 =item * Better support for Lisp macros.
 
 =item * Find a way to convert filehandles to the Emacs equivalent.
 
 =item * Make a way to get a tied filehandle that reads a buffer.
-
-=item * Provide a way to bypass the default data conversion routines
-when passing arguments and function return values between the
-languages.
-
-Possible syntax:
-
-    $x = Emacs::Lisp::Object->funcall("func", [1, "2"], 3.0);
-
-The value returned by the Lisp function C<func> would be stored in
-C<$x> as a blessed reference to a Lisp object, even if the object has
-a natural Perl equivalent.  The first argument C<([1, "2"])> would be
-given to C<func> as a real Perl arrayref.  (Its C<type-of> would be
-C<perl-array>.)  However, C<3.0> could be converted to a Lisp float,
-since there is already a way to pass it as a Perl scalar (by using
-C<\3.0>).
-
-If C<$x> received, say, a Lisp list from C<func>, C<$x> would belong
-to package C<Emacs::Lisp::Cons>, where C<@Emacs::Lisp::Cons::ISA> is
-qw(Emacs::Lisp::Object)>.  This package would provide methods C<car>,
-C<cdr>, C<setcar>, and C<setcdr>.  As a special case, when Lisp
-returned objects that are really Perl data, they would be "unwrapped"
-rather than wrapped.  (I don't see much point in wrapping a Perl
-object inside a Lisp object inside a Perl object.)
-
-Conversely, Lisp could be given functions to act on Perl data, such as
-C<perl-aref> for indexing into a C<perl-array>.  Lisp could also have
-a way to call Perl subs with no argument or return-value conversion.
 
 =item * Improve perl-eval-buffer, perl-load-file, et al. (in C?)
 
@@ -924,13 +951,18 @@ I was lucky enough to come onto the Perl scene soon after dynamic
 loading had reached its present form.  How you all got by before then
 completely baffles me.
 
-=item Doug MacEachern, author of the `ExtUtils::Embed' module.
+=item Doug MacEachern, author of the `ExtUtils::Embed' module and
+mod_perl.
 
 ExtUtils::Embed is a cornerstone of Perlmacs.
 
 =back
 
 This list is incomplete.
+
+Thank you, Di Zhao <dzhao@primeon.com>, for braving the alphas and
+showing me what can be done with Perlmacs.  If not for you, I would
+still be wondering whether it could possibly have any use.
 
 Personal thanks to Nate Patwardhan, who sparked my early interest in
 Perl--and shared his F<.emacs> with me--during our NFIC days.  Nate
@@ -977,6 +1009,6 @@ Emacs documentaion for full details.
 =head1 SEE ALSO
 
 L<perl>, B<emacs>, and I<The Elisp Manual> (available where you got
-the Emacs source, or from ftp://prep.ai.mit.edu/pub/gnu/).
+the Emacs source, or from ftp://ftp.gnu.org/pub/gnu/emacs/).
 
 =cut

@@ -14,13 +14,14 @@ BEGIN {
      sub { &eq (1, 1) },
      sub { ! &eq (1, "1") },
      sub { &eq (&intern("foo"), \*::foo) },
-     
+#     sub { &eq (&Emacs::Lisp::Object::to_lisp (\*foo), \*foo) },
+
      sub {
        import Emacs::Lisp '$foo';
        &set (\*foo, 3);
        $foo == 3;
      },
-     
+
      sub {
        import Emacs::Lisp '$foo';
        $foo = 5;
@@ -50,6 +51,11 @@ BEGIN {
      },
 
      sub {
+       delete $bar{\*baz};
+       not exists ($bar{\*baz});
+     },
+
+     sub {
        %bar = (\*heh, 45);
        &equal (&symbol_plist (\*bar), [\*heh, 45]);
      },
@@ -64,7 +70,6 @@ BEGIN {
        &get (\*zab, \*rab) eq 'oof';
      },
 
-### XXX commented out because they don't work any more!
      sub {
        defun (\*funnie, 'doc', &interactive(), sub { $_[0] + $_[1] });
        &funnie(45,60) == 105;

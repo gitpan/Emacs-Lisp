@@ -20,9 +20,9 @@
 #include <perl.h>
 #include <XSUB.h>
 
-#include <Emacs/config.h>
-#include <Emacs/lisp.h>
-#include <Emacs/perlmacs.h>
+#include <emacs/config.h>
+#include <emacs/lisp.h>
+#include <emacs/perlmacs.h>
 
 
 /* Try to ferret out the variables that get assigned to in a coderef.
@@ -136,52 +136,26 @@ main(...)
 
 MODULE = Emacs::Lisp		PACKAGE = Emacs::Lisp
 
-void
+SV *
 funcall(...)
 	PROTOTYPE: $@
-	PPCODE:
+	CODE:
 	{
-	  Lisp_Object *args, args_as_string, retval, tail;
+	  Lisp_Object *args, args_as_string, ret, tail;
 	  int i;
 
 	  args = (Lisp_Object *) alloca (items * sizeof (Lisp_Object));
 	  for (i = 0; i < items; i++)
 	    args [i] = sv_to_lisp (ST (i));
 
-	  retval = perlmacs_funcall (items, args);
-
-	  /* Convert Lisp lists to Perl lists in list context only.  */
-	  switch (GIMME_V)
-	    {
-	    case G_VOID:
-	      break;
-	    case G_SCALAR:
-	    default:
-	      XPUSHs (lisp_to_sv (retval));
-	      break;
-	    case G_ARRAY:
-	      if (! NILP (retval))
-		{
-		  if (CONSP (retval))
-		    {
-		      do
-			{
-			  XPUSHs (lisp_to_sv (XCAR (retval)));
-			  retval = XCDR (retval);
-			} while (CONSP (retval));
-		      if (! NILP (retval))
-			{
-			  if (PL_dowarn)
-			    warn ("A Lisp function called in list context returned a pseudo-list");
-			  XPUSHs (lisp_to_sv (retval));
-			}
-		    }
-		  else
-		    XPUSHs (lisp_to_sv (retval));
-		}
-	      break;
-	    }
+	  ret = perlmacs_funcall (items, args);
+	  if (GIMME_V == G_VOID)
+	    RETVAL = &PL_sv_undef;
+	  else
+	    RETVAL = lisp_to_sv (ret);
 	}
+	OUTPUT:
+	RETVAL
 
 void
 _assignees(coderef)
@@ -205,3 +179,60 @@ _assignees(coderef)
 	  push_op_assignees(((UNOP *) root)->op_first);
 	  SPAGAIN;
 	}
+
+
+MODULE = Emacs::Lisp		PACKAGE = Emacs::Lisp::Object
+
+# This funcall is identical to Emacs::Lisp::funcall except in how the
+# returned value is converted to Perl.  Emacs::Lisp::funcall performs
+# meaningful conversions of similar types, including deep copying of
+# nested lists as arrayrefs.  Here we do not convert, we merely wrap.
+
+SV *
+funcall(...)
+	PROTOTYPE: $@
+	CODE:
+	{
+	  Lisp_Object *args, args_as_string, ret, tail;
+	  int i;
+
+	  args = (Lisp_Object *) alloca (items * sizeof (Lisp_Object));
+	  for (i = 0; i < items; i++)
+	    args [i] = sv_to_lisp (ST (i));
+
+	  ret = perlmacs_funcall (items, args);
+	  if (GIMME_V == G_VOID)
+	    RETVAL = &PL_sv_undef;
+	  else
+	    RETVAL = sv_wrap_lisp (ret);
+	}
+	OUTPUT:
+	RETVAL
+
+SV *
+to_perl(sv)
+	SV *sv;
+	PROTOTYPE: $
+	CODE:
+	if (SV_LISPP (sv))
+	  RETVAL = lisp_to_sv (XSV_LISP (sv));
+	else
+	  Perl_croak ("Not a Lisp object");
+	OUTPUT:
+	RETVAL
+
+#if 0
+SV *
+to_lisp(sv)
+	SV *sv;
+	PROTOTYPE: $
+	CODE:
+	/* XXX is this useful?  will it ever be? */
+	if (SV_LISPP (sv))  /* XXX overhead. needed? */
+	  RETVAL = sv;
+	else
+	  RETVAL = sv_wrap_lisp (lisp_wrap_sv (sv));
+	OUTPUT:
+	RETVAL
+
+#endif
