@@ -1,5 +1,5 @@
 README for Perl module Emacs::Lisp
-last updated: 13 Mar 1999
+last updated: 19 Mar 1999
 
 ##################################################################
 ###### CAUTION ###### CAUTION ###### CAUTION ###### CAUTION ######
@@ -29,7 +29,7 @@ which versions of the various packages work together:
        0.75	20.3	5.004	0.6.2.2
        0.80  	20.3	5.005	0.7.1
        0.84  	20.3	5.005	0.8
-       0.87  	20.3	5.005	0.9
+       0.88  	20.3	5.005	0.9
 
 
 WHY
@@ -38,10 +38,15 @@ The intent is to allow Emacs modules and customization code to be
 written in Perl, as well as Emacs Lisp.  Because we can.  :-)
 
 Actually, my motives have mostly to do with becoming a better
-programmer and familiarizing myself with Perl and Emacs, two very
-important programs.  See
+programmer, familiarizing myself with Perl and Emacs and indulging my
+fascination with language translation.  See
 http://www.tux.org/~niemi/opensource/developer-motivation.html for a
 nice explanation by David Niemi.
+
+As for why anyone would want to install Perlmacs, your guess is as
+good as mine.  One brave soul emailed me to say that he had made
+Perlmacs "a very important tool" for his y2k consulting work.  You can
+see his code at http://john-edwin-tobey.org/.
 
 
 HOW
@@ -118,16 +123,6 @@ accessible through `C-h f'.  No texinfo docs yet, sorry.
 
 For information on getting the latest source via anonymous CVS, see
 http://john-edwin-tobey.org/perlmacs/.
-
-
-CAVEATS
--------
-As of this BETA version, crashes may occur, resulting in the loss of
-unsaved editing changes.
-
-This is not meant to be tried on anything other than Unix-like
-systems.  However, if you get it to work on non-unix, I would be
-delighted to hear about it!
 
 
 LICENSE

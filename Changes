@@ -78,7 +78,10 @@ namespace for getting genuine, unconverted Lisp objects.
 	Added `lisp' for wrapping Perl data in Lisp objects.  Reworked
 most of the documentation.
 
-0.87  
+0.87  19-Mar-1999 11:41
 	Split out non-Lisp stuff for Emacs package.  Update for
 Perlmacs 0.9.  Move test.pl into several files in t, and add several
 tests.
+
+0.88  Fri Mar 19 22:20:34 EST 1999
+	Correctly test for required Perlmacs version in Makefile.PL.
