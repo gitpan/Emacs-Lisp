@@ -27,7 +27,7 @@ lists which versions of the various packages work together:
    ===========  =====   ====    ========
        0.71	20.2	5.004	0.6.2
        0.75	20.3	5.004	0.6.2.2
-       0.78	20.3	5.005	0.7
+       0.79  	20.3	5.005	0.7
 
 
 WHY
@@ -45,16 +45,17 @@ nice explanation by David Niemi.
 HOW
 ---
 You must first install PERL VERSION 5.005 or higher.  If you get core
-dumps during process termination, I recommend you configure Perl with
--Dusemymalloc=y.  So far, I have seen this problem only with the
-Emacs::Lisp test script, and using Perl's malloc seems to cure it.
+dumps during Perlmacs process termination, I recommend you configure
+Perl with -Dusemymalloc=y.  So far, I have seen this problem only with
+the Emacs::Lisp test script, and using Perl's malloc seems to cure it.
 
 Your Perl must have working ExtUtils::Embed capabilities.  If not,
 `configure' will exclude Perl support, and you will have something
 close to standard GNU Emacs.  If you are unsure about this, watch the
 messages printed by `configure'.  If they say that Perl is embeddable,
-good.  If not, have a peek at the generated config.log file for clues,
-and mail me any workarounds.
+good.  If not, make sure your Perl is at least version 5.005.  If it
+is, have a peek at the generated config.log file for clues, and mail
+me any workarounds.
 
 Retrieve the Emacs 20.3 distribution from a location such as one of
 these:
@@ -63,13 +64,13 @@ these:
    ftp://metalab.unc.edu/pub/gnu/emacs/emacs-20.3.tar.gz
 
 You may want to grab the Elisp Manual, elisp-manual-20-2.5.tar.gz,
-while you're there.  (At this time, knowledge of Elisp is essential
+while you're there.  (At this time, knowledge of Elisp is very helpful
 for programming with Emacs::Lisp.)
 
 Retrieve the latest Perlmacs patch from one of these locations:
 
    http://www.perl.com/CPAN/authors/id/JTOBEY/emacs-20.3-perlmacs-*.pl.gz
-   http://www.john-edwin-tobey.org/perlmacs/src/emacs-20.3-perlmacs-*.pl.gz
+   http://john-edwin-tobey.org/perlmacs/src/emacs-20.3-perlmacs-*.pl.gz
 
 (Substitute the highest version number, at least 0.7, for `*'.)  Then
 do
@@ -87,7 +88,7 @@ basic procedure should be familiar:
 
 This will, by default, install the program in /usr/local/bin under the
 names `pmacs' and `perlmacs'.  The program can parse its command line
-as either Perl or Emacs would, depending on whether "perl" appears in
+as either Perl or Emacs would, dependent on whether "perl" appears in
 its name.  (Using `--perl' or `--emacs' as the first arg overrides
 this.)
 
@@ -108,9 +109,11 @@ in place of perl.
    make test
    make install
 
+If `make test' prints all ok but dumps core at the end, read the
+paragraph under "HOW" above.
+
 Most of the documentation for both the patch and the module is in
-perl/Emacs/Lisp/Lisp.pm and should be accessible after installation
-via
+perl/Emacs/Lisp/Lisp.pm and will be accessible after installation via
 
    perldoc Emacs::Lisp
 

@@ -40,6 +40,26 @@ BEGIN {
      },
 
      sub {
+       $bar{\*zab} = 15;
+       my (@k) = (values %bar);
+       @k == 2 && $k[0] + $k[1] == 171;
+     },
+
+     sub {
+       exists $bar{\*baz};
+     },
+
+     sub {
+       delete $bar{\*baz};
+       &null ($bar{\*baz});
+     },
+
+     sub {
+       %bar = (\*heh, 45);
+       &equal (&symbol_plist (\*bar), [\*heh, 45]);
+     },
+
+     sub {
        setq { $narf = "oblert" };
        &equal (&symbol_value(\*narf), "oblert");
      },
@@ -88,7 +108,7 @@ BEGIN {
 
 ####################### We [finish] with some black magic to print on failure.
 
-BEGIN { $^W = $| = 1; print "1..", 1 + @tests, "\n"; }
+BEGIN { $^W = 1; $| = 1; print "1..", 1 + @tests, "\n"; }
 END {print "not ok 1\n" unless $loaded;}
 use Emacs::Lisp;
 $loaded = 1;

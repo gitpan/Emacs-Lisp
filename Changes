@@ -36,6 +36,8 @@ interface tweaks.
 	Split Emacs::Lisp out from the Perlmacs patch distribution.
 Added test.pl.
 
+### Here the Emacs::Lisp and Perlmacs version numbers part ways. ###
+
 0.70  Fri Mar 20 01:37:36  1998
 	Added `defun'.
 
@@ -54,5 +56,10 @@ Added test.pl.
 0.75  Sat Feb 27 20:22:51 EST 1999
 	Emacs 20.3-related bugfix affecting Emacs::main.
 
-0.76  
-	Changed internals to work with Perlmacs 0.7.
+0.78  Wed Mar  3 03:19:00 EST 1999
+	Changed internals to work with Perlmacs 0.7.  Skip versions
+0.76 and 0.77 in case 0.75 needs further tweaking.
+
+0.79  Thu Mar  4 02:35:36 EST 1999
+	Documentation overhaul, plus a temporary kludge to disable
+Perlification of Lisp lists.
