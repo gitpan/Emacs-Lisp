@@ -4,7 +4,7 @@ use strict;
 my ($emacs_info, $perlmacs_ver, $header_dir, $config_h_dir, $required_ver);
 my ($cmd);
 
-$required_ver = 0.8;
+$required_ver = 0.9;
 
 if (not defined &Emacs::Lisp::Object::DESTROY) {
     die <<DEAD;
@@ -72,4 +72,5 @@ WriteMakefile(
     'NAME'	=> 'Emacs::Lisp',
     'VERSION_FROM' => 'Lisp.pm', # finds $VERSION
     'INC'	=> "-I$config_h_dir -I$header_dir",
+    'dist'	=> { COMPRESS => 'gzip', SUFFIX => 'gz' },
 );

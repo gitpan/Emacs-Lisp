@@ -1,5 +1,5 @@
 README for Perl module Emacs::Lisp
-last updated: 10 Mar 1999
+last updated: 13 Mar 1999
 
 ##################################################################
 ###### CAUTION ###### CAUTION ###### CAUTION ###### CAUTION ######
@@ -15,11 +15,11 @@ last updated: 10 Mar 1999
 
 WHAT
 ----
-Perlmacs is a patch of GNU Emacs.  It creates a program that has all
-the functionality of both Perl and Emacs.  The Emacs::Lisp module
-allows Perl code to call functions and access variables of Lisp.
+Perlmacs is a program based on GNU Emacs that has all the
+functionality of both Perl and Emacs.  The Emacs::Lisp module allows
+Perl code to call functions and access variables of Lisp.
 
-This release uses features introduced in Perlmacs 0.8, which is based
+This release uses features introduced in Perlmacs 0.9, which is based
 on Emacs 20.3 and requires Perl 5.005.  The following table lists
 which versions of the various packages work together:
 
@@ -29,6 +29,7 @@ which versions of the various packages work together:
        0.75	20.3	5.004	0.6.2.2
        0.80  	20.3	5.005	0.7.1
        0.84  	20.3	5.005	0.8
+       0.87  	20.3	5.005	0.9
 
 
 WHY
@@ -85,9 +86,10 @@ basic procedure should be familiar:
 
 This will, by default, install the program in /usr/local/bin under the
 names `pmacs' and `perlmacs'.  The program can parse its command line
-as either Perl or Emacs would, dependent on whether "perl" appears in
+as either Perl or Emacs would, depending on whether "perl" appears in
 its name.  (Using `--perl' or `--emacs' as the first arg overrides
-this.)
+this.)  (If you want, you *could* install it as `perl' and `emacs'
+with probably no ill effects other than slower startup.)
 
 If you wish to use an installed version of perl other than the one
 that's in your $PATH, set the environment variable $PERL to the

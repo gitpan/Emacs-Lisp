@@ -77,3 +77,8 @@ namespace for getting genuine, unconverted Lisp objects.
 0.84  Wed Mar 10 01:53:00 EST 1999
 	Added `lisp' for wrapping Perl data in Lisp objects.  Reworked
 most of the documentation.
+
+0.87  
+	Split out non-Lisp stuff for Emacs package.  Update for
+Perlmacs 0.9.  Move test.pl into several files in t, and add several
+tests.

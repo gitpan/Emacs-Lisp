@@ -5,4 +5,10 @@ Lisp.pm
 Lisp.xs
 Makefile.PL
 README
-test.pl
+t/00_boot.t
+t/10_conv.t
+t/20_tie.t
+t/30_special.t
+t/40_error.t
+t/50_emacs.t
+t/60_interp.t

@@ -4,8 +4,10 @@
 
 package Emacs::Lisp;
 
-use 5.005;  # This version requires Perlmacs 0.8, which requires 5.005.
+use 5.005;  # This version requires Perlmacs 0.9, which requires 5.005.
 use Carp;
+
+# This is, at least for now, the canonical way to test for Perlmacs.
 unless (defined (&Emacs::Lisp::Object::DESTROY)) {
   croak ("Emacs::Lisp can only be used by a perl embedded in GNU Emacs");
 }
@@ -13,41 +15,71 @@ unless (defined (&Emacs::Lisp::Object::DESTROY)) {
 use strict;
 no strict 'refs';
 use vars qw ($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS $AUTOLOAD
-	     %EXPORT %ENV);
+	     %EXPORT);
 my (%special);
 
 require Exporter;
 require DynaLoader;
 
 @ISA = qw (Exporter DynaLoader);
-
-$VERSION = '0.84';
+$VERSION = '0.87';
 bootstrap Emacs::Lisp $VERSION;
+
+# Closure generator shared by Emacs::Lisp::AUTOLOAD and
+# Emacs::Lisp::Object::AUTOLOAD.
+# FIXME: This code tries to be very clever for best performance,
+# but it should be thoroughly tested.
+my $get_funcall_closure = sub {
+    my ($whose_funcall, $function) = @_;
+    my ($fullname);
+
+    $function =~ s/.*:://;
+    $fullname = "${whose_funcall}::$function";
+    if (defined &$fullname) {
+	return \&$fullname;
+    }
+    if (exists $special{$function}) {
+	my $msg = $special{$function};
+	$msg = $special{$1}
+	while $msg =~ /^\*(.*)/;
+	$msg = (defined ($msg) ? "; $msg" : "");
+	$function =~ tr/_/-/;
+	local $Carp::CarpLevel = $Carp::CarpLevel + 1;
+	croak "`$function' not implemented$msg";
+    }
+    $function = \*{"::$function"};
+    $whose_funcall .= "::funcall";
+    return *$fullname = sub { &$whose_funcall ($function, @_) };
+};
+
+# FIXME: need test for this.
+my $can = sub {
+    my ($symbol);
+    $symbol = \*{"::$_[1]"};
+    if (&fboundp ($symbol)
+	and do {
+	    my ($f);
+	    $f = Emacs::Lisp::Object::symbol_function ($symbol);
+	    (not $f->consp->is_nil) or $f->car->eq (\*::macro)->is_nil;
+	}) {
+	return eval { &$get_funcall_closure };
+    }
+    return undef;
+};
 
 
 package Emacs::Lisp::Object;
 
 use vars qw ($AUTOLOAD);
 
-# XXX This sub is (or should be!) textually identical to
-# Emacs::Lisp::AUTOLOAD below, but it calls the non-converting funcall.
 sub AUTOLOAD {
-  my $function = $AUTOLOAD;
-  $function =~ s/.*:://;
-  if (exists $special{$function}) {
-    my $msg = $special{$function};
-    $msg = $special{$1}
-      while $msg =~ /^\*(.*)/;
-    $msg = (defined ($msg) ? "; $msg" : "");
-    Carp::croak "`$function' not implemented$msg";
-  }
-  $function = \*{"::$function"};
-  *$AUTOLOAD = sub { &funcall ($function, @_) };
-  goto &$AUTOLOAD;
+    *$AUTOLOAD = $get_funcall_closure->(__PACKAGE__, $AUTOLOAD);
+    goto &$AUTOLOAD;
 }
+sub can { &UNIVERSAL::can || $can->(__PACKAGE__, $_[1]) }
 
 sub is_nil	($) { defined $_[0]->null->to_perl }
-#sub new		($$) { &to_lisp ($_[1]) }
+sub new		($$) { &to_lisp ($_[1]) }
 
 
 package Emacs::Lisp::Variable;
@@ -142,43 +174,6 @@ sub NEXTKEY {
 }
 
 
-package Emacs::Lisp::Environment;
-
-# Try to keep %ENV more or less in sync with process-environment.
-# We're probably out of luck if someone does (let (process-environment)... )
-# or local(%ENV) or the like.
-
-use vars qw(%perl_env);
-*perl_env = \%ENV;
-
-sub Emacs::Lisp::setenv {
-  my ($var, $val) = @_;
-  $perl_env{$var} = $val;
-  &Emacs::Lisp::funcall (\*::setenv, @_);
-}
-
-sub TIEHASH	{ bless {}, $_[0] }
-sub FETCH	{ $perl_env{$_[1]} }
-sub STORE	{ &Emacs::Lisp::setenv ($_[1], $_[2]) }
-sub EXISTS	{ exists $perl_env{$_[1]} }
-sub FIRSTKEY	{ keys %perl_env; each %perl_env; }
-sub NEXTKEY	{ each %perl_env; }
-
-sub DELETE {
-  shift;
-  my $var = shift;
-  &Emacs::Lisp::funcall(\*::setenv, $var, undef);
-  delete $perl_env{$var};
-}
-
-sub CLEAR {
-  &Emacs::Lisp::set(\*::process_environment, undef);
-  %perl_env = ();
-}
-
-tie %Emacs::Lisp::ENV, 'Emacs::Lisp::Environment';
-
-
 package Emacs::Lisp;
 
 sub import {
@@ -218,9 +213,9 @@ sub import {
      funcs	=> [qw(
 		       funcall
 		       AUTOLOAD
-		       setenv
 		       )],
      special	=> [qw(
+		       catch
 		       defun
 		       interactive
 		       save_current_buffer
@@ -234,9 +229,6 @@ sub import {
 		       t
 		       nil
 		       )],
-     # XXX  %ENV, along with %SIG, STDIN, etc, will probably
-     # go in Emacs.pm.
-     process => [qw(%ENV)],
      );
 
 # Sorry guys, but you know Emacs is a hog.
@@ -247,23 +239,14 @@ sub t () { \*::t }
 sub nil () { undef }
 
 sub AUTOLOAD {
-  my $function = $AUTOLOAD;
-  $function =~ s/.*:://;
-  if (exists $special{$function}) {
-    my $msg = $special{$function};
-    $msg = $special{$1}
-      while $msg =~ /^\*(.*)/;
-    $msg = (defined ($msg) ? "; $msg" : "");
-    croak "`$function' not implemented$msg";
-  }
-  $function = \*{"::$function"};
-  *$AUTOLOAD = sub { &funcall ($function, @_) };
-  goto &$AUTOLOAD;
+    *$AUTOLOAD = $get_funcall_closure->(__PACKAGE__, $AUTOLOAD);
+    goto &$AUTOLOAD;
 }
+sub can { &UNIVERSAL::can || $can->(__PACKAGE__, $_[1]) }
 
 %special =
   (
-  'setq-default'	=> "use `&set_default(\\*::symbol, \$value)' instead",
+  'setq_default'	=> "use `&set_default(\\*::symbol, \$value)' instead",
   'or'			=> "use Perl's `or' or `||' operator instead",
   'and'			=> "use Perl's `and' or `&&' operator instead",
   'if'			=> "use Perl's `if' or `?...:' operator instead",
@@ -280,10 +263,10 @@ sub AUTOLOAD {
   'let*'		=> '*let',
   'let'			=> "functionality to be added",
   'while'		=> "use Perl's `for', `while' or `until' instead",
-  'catch'		=> "use Perl's `next LABEL' or `return', for example",
-  'unwind-protect'	=> "functionality to be added",
-  'condition-case'	=> "use Perl's `eval' instead",
-  'ml-if'		=> undef,
+  'unwind_protect'	=> "use Perl's `local' or object destructors instead",
+  'condition_case'	=> "use Perl's `eval' instead",
+  'ml_if'		=> undef,
+  'eval_when_compile'	=> "use a `BEGIN' block or Perl's `use' instead",
   );
 
 sub setq (&) {
@@ -335,6 +318,10 @@ sub defun ($$;$$) {
   push @form, [\*::apply, $body, \*::_Emacs__Lisp_args];
   &fset ($sym, [@form]);
   return $sym;
+}
+
+sub catch ($&) {
+    &eval ([\*::catch, [\*::quote, $_[0]], [\*::funcall, $_[1]]]);
 }
 
 sub save_excursion (&) {
@@ -523,55 +510,9 @@ etc.).  In either case, the first command line argument can take
 precedence.  If it is B<--emacs>, Emacs takes control.  If it is
 B<--perl>, we play by Perl's rules.
 
-When you C<use Emacs::Lisp> in a B<perlmacs> script, a Perl sub named
-C<Emacs::main> may be used to invoke the Emacs editor.
-
-B<NOTE: This section is highly subject to change.  There will be a
-separate Emacs module, which will be independent of C<Emacs::Lisp>.>
-
-This makes it possible to put customization code, which would normally
-appear as Lisp in F<~/.emacs>, into a Perl script.  For example, this
-startup code
-
-  (setq
-   user-mail-address "gnaeus@perl.moc"
-   mail-self-blind t
-   mail-yank-prefix "> "
-   )
-
-  (put 'eval-expression 'disabled nil)
-
-  (global-font-lock-mode 1 t)
-  (set-face-background 'highlight "maroon")
-  (set-face-background 'region "Sienna")
-
-could be placed in a file with the following contents:
-
-  #! /usr/local/bin/perlmacs
-
-  use Emacs::Lisp;
-
-  setq {
-    $user_mail_address = 'gnaeus@perl.moc';
-    $mail_self_blind = t;
-    $mail_yank_prefix = '> ';
-    $eval_expression{\*disabled} = undef;
-  };
-
-  &global_font_lock_mode(1, t);
-  &set_face_background(\*highlight, "maroon");
-  &set_face_background(\*region, "Sienna");
-
-  exit Emacs::main($0, "-q", @ARGV);
-
-When you wanted to run Emacs, you would invoke this program.
-
-The arguments to C<Emacs::main> correspond to the C<argv> of the
-C<main> function in a C program.  The first argument should be the
-program's invocation name, as in this example.  B<-q> inhibits
-running F<~/.emacs> (which is the point, after all).
-
-See L</BUGS> for problems with C<Emacs::main>.
+The I<Emacs> module (that is, the Perl module named `Emacs') includes
+support for starting an Emacs editing session from within a Perlmacs
+script.  See L<Emacs>.
 
 
 =head1 PERL SUPPORT FOR LISP
@@ -704,22 +645,40 @@ equivalent:
 
 See also the C<setq> function below.
 
-=head2 Special Forms
+=head2 Macros
 
-So-called "special forms" in Lisp, such as C<setq> and C<defun>, do
-not work the same way functions do, although they are invoked using
-the function syntax.  (Here you see the vast philosophical chasm
+So-called "macros" in Lisp, such as C<setq> and C<defun>, do not work
+the same way functions do, although they are invoked using the
+function syntax.  (Here you see the vast philosophical chasm
 separating Perl from Lisp.  While Perl might have five syntaxes for
 doing the same thing, Lisp uses one syntax for two different
 purposes!)
 
-Some special forms are equivalent to Perl operators, such as C<if> and
-C<while>.  Others have meanings peculiar to Lisp.  A few special forms
-are implemented in Emacs::Lisp.  They are listed below.  If you try to
-call a special form that has not been implemented, you will get an
-error message which may propose an alternative.
+Some macros are equivalent to Perl operators, such as C<if> and
+C<while>.  Others have meanings peculiar to Lisp.  A few macros are
+implemented in Emacs::Lisp.  They are listed below.  If you try to
+call a macros that has not been implemented, you will get an error
+message which may propose an alternative.
 
 =over 8
+
+=item catch SYMBOL,CODE
+
+Evaluate CODE in a Lisp `catch' construct.  At any point during CODE's
+execution, the `throw' function may be used to return control to the
+end of the `catch' block.  For example:
+
+  $x = catch \*::out, sub {
+      $y = 1;
+      &throw(\*::out, 16);
+      $y = 2;
+  };
+  print $x;  # prints 16
+  print $y;  # prints 1
+
+Some Perl constructs have similar functionality to `throw', for
+example, `return', `last LABEL'.  However, they do not work with
+catches in Lisp code.
 
 =item defun SYMBOL,DOCSTRING,SPEC,CODE
 
@@ -835,40 +794,10 @@ bugs, please check that you have the latest version, and email me.
 
 =over 4
 
-=item * Problems with `Emacs::main'.
-
-The C<Emacs::main> sub may open an X display and not close it.  That
-is the most obvious of many problems with C<Emacs::main>.
-
-The thing is, Emacs was not written with the expectation of being
-embedded in another program, least of all a language interpreter such
-as Perl.  Therefore, when Emacs is told to exit, it believes the
-process is really about to exit, and it neglects to tidy up after
-itself.
-
-For best results, the value returned by C<Emacs::main> should be
-passed to Perl's C<exit> soon, as in this code:
-
-  exit (Emacs::main($0, @args));
-
 =item * Perl's `local()' doesn't have the effect of Lisp's `let'.
 
 It should.  At least, there should be an easy way to make a local
 binding of a Lisp variable in Perl.
-
-=item * STDIN, STDOUT, STDERR, %ENV, %SIG, ...
-
-If Perl code tries to read from C<STDIN>, Emacs becomes unresponsive.
-This is very distressing.  Also, Perl loves to print error and warning
-messages to C<STDERR>, which can be confusing.  The messages should
-probably be redirected to a buffer or the minibuffer.
-
-Perl and Emacs use environment variables and signal handlers in
-different, incompatible ways.  This needs to be coordinated.  I've
-made a start with %ENV, but more needs to be done.
-
-These issues do not directly relate to Lisp, so I plan to create a new
-module called simply `Emacs' that will take care of them.
 
 =item * Function arg names in online documentation.
 
@@ -937,10 +866,16 @@ in principle by reimplementing Emacs' internals.)
 
 =over 4
 
-=item * Create Emacs.pm and Emacs.xs for non-Lisp-related things.
+=item * Bundle Perlmacs and its related modules.
 
-These would include Emacs::main, %ENV, %SIG, the standard filehandles,
-and perhaps other builtin Perl variables.
+=item * Provide XSubs for common, non-evalling functions.
+
+There is substantial overhead in calling an arbitrary Lisp function,
+because care must be taken to restore the Perl interpreter's state
+when Lisp performs a non-local jump out of the function call.  This
+can be avoided in the case of functions like cons, null bufferp, car,
+eq, and symbol-value, for which a simple check can determine whether a
+jump will occur.
 
 =item * Special forms: unwind-protect, let, defmacro, defvar.
 
@@ -1019,8 +954,8 @@ didn't implement the change he requested, I hope Ilya approves.
 
 =head1 COPYRIGHT
 
-Copyright (C) 1998 by John Tobey, jtobey@channel1.com.  All rights
-reserved.
+Copyright (C) 1998,1999 by John Tobey, jtobey@channel1.com.  All
+rights reserved.
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -1049,7 +984,7 @@ Emacs documentaion for full details.
 
 =head1 SEE ALSO
 
-L<perl>, B<emacs>, and I<The Elisp Manual> (available where you got
-the Emacs source, or from ftp://ftp.gnu.org/pub/gnu/emacs/).
+L<perl>, L<Emacs>, B<emacs>, and I<The Elisp Manual> (available where
+you got the Emacs source, or from ftp://ftp.gnu.org/pub/gnu/emacs/).
 
 =cut

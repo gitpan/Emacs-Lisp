@@ -32,7 +32,7 @@
 
    not things like $baz in  $foo[$baz=4] = 7 .  Currently, we're only
    looking for scalars and hash elements.  */
-/* XXX Replace with Perl code that uses B.  */
+/* FIXME: Replace with Perl code that uses B.  */
 static void
 push_op_assignees (startop)
      OP *startop;
@@ -85,56 +85,10 @@ push_op_assignees (startop)
 }
 
 
-MODULE = Emacs::Lisp		PACKAGE = Emacs
+MODULE = Emacs::Lisp		PACKAGE = Emacs::Lisp
 
 BOOT:
-	if (top_level_perl)
-	  {
-	    char *dummy_argv[] = { "perl", 0 };
-	    noninteractive = 1;
-	    init_lisp (1, dummy_argv, 0);
-	  }
-
-int
-main(...)
-	PROTOTYPE: @
-	CODE:
-	{
-	  char **argv;
-	  int i;
-	  int len;
-	  SV *in_main;
-
-	  if (! top_level_perl)
-	    croak ("Can't call Emacs::main from within Emacs Lisp");
-
-	  in_main = perl_get_sv ("Emacs::in_main", TRUE);
-	  if (SvTRUE (in_main))
-	    croak ("Sub Emacs::main can't be called recursively");
-
-	  if (items == 0)
-	    {
-	      items = 1;
-	      EXTEND (sp, 1);
-	      /* Use "$0" as the arg if none given.  */
-	      ST (0) = GvSV (gv_fetchpv("0", 1, SVt_PV));
-	    }
-
-	  argv = (char **) alloca ((items + 1) * sizeof (char *));
-	  for (i = 0; i < items; i ++)
-	    /* FIXME: Would it be too paranoid if we strdup() the args?  */
-	    argv [i] = SvPV (ST (i), na);
-	  argv [items] = 0;
-
-	  sv_setsv (in_main, &sv_yes);
-	  RETVAL = perl_call_emacs_main (items, argv, 0);
-	  sv_setsv (in_main, &sv_no);
-	}
-	OUTPUT:
-	RETVAL
-
-
-MODULE = Emacs::Lisp		PACKAGE = Emacs::Lisp
+	perlmacs_init (ARGS);
 
 SV *
 funcall(...)
@@ -146,13 +100,13 @@ funcall(...)
 
 	  args = (Lisp_Object *) alloca (items * sizeof (Lisp_Object));
 	  for (i = 0; i < items; i++)
-	    args [i] = sv_to_lisp (ST (i));
+	    args [i] = perlmacs_sv_to_lisp (ST (i));
 
 	  ret = perlmacs_funcall (items, args);
 	  if (GIMME_V == G_VOID)
 	    RETVAL = &PL_sv_undef;
 	  else
-	    RETVAL = lisp_to_sv (ret);
+	    RETVAL = perlmacs_lisp_to_sv (ret);
 	}
 	OUTPUT:
 	RETVAL
@@ -186,9 +140,9 @@ lisp(sv)
 	PROTOTYPE: $
 	CODE:
 	if (SvROK (sv))
-	  RETVAL = sv_wrap_lisp (lisp_wrap_sv (SvRV (sv)));
+	  RETVAL = perlmacs_sv_wrap_lisp (perlmacs_lisp_wrap_sv (SvRV (sv)));
 	else
-	  RETVAL = sv_wrap_lisp (sv_to_lisp (sv));
+	  RETVAL = perlmacs_sv_wrap_lisp (perlmacs_sv_to_lisp (sv));
 	OUTPUT:
 	RETVAL
 
@@ -200,6 +154,8 @@ MODULE = Emacs::Lisp		PACKAGE = Emacs::Lisp::Object
 # meaningful conversions of similar types, including deep copying of
 # nested lists as arrayrefs.  Here we do not convert, we merely wrap.
 
+# FIXME: Common parts of the two funcalls should be factored out.
+
 SV *
 funcall(...)
 	PROTOTYPE: $@
@@ -210,13 +166,13 @@ funcall(...)
 
 	  args = (Lisp_Object *) alloca (items * sizeof (Lisp_Object));
 	  for (i = 0; i < items; i++)
-	    args [i] = sv_to_lisp (ST (i));
+	    args [i] = perlmacs_sv_to_lisp (ST (i));
 
 	  ret = perlmacs_funcall (items, args);
 	  if (GIMME_V == G_VOID)
 	    RETVAL = &PL_sv_undef;
 	  else
-	    RETVAL = sv_wrap_lisp (ret);
+	    RETVAL = perlmacs_sv_wrap_lisp (ret);
 	}
 	OUTPUT:
 	RETVAL
@@ -226,6 +182,8 @@ to_perl(sv)
 	SV *sv;
 	PROTOTYPE: $
 	CODE:
-	RETVAL = lisp_to_sv (XSV_LISP (sv));
+	if (! SV_LISPP (sv))
+	  Perl_croak ("Not a Lisp object");
+	RETVAL = perlmacs_lisp_to_sv (XSV_LISP (sv));
 	OUTPUT:
 	RETVAL
