@@ -1,5 +1,5 @@
 README for Perl module Emacs::Lisp
-last updated: 21 Feb 1999
+last updated: 27 Feb 1999
 
 ##################################################################
 ###### CAUTION ###### CAUTION ###### CAUTION ###### CAUTION ######
@@ -19,17 +19,18 @@ Perlmacs is a patch of GNU Emacs.  It creates a program that has all
 the functionality of both Perl and Emacs.  The Emacs::Lisp module
 allows Perl code to call functions and access variables of Lisp.
 
-This release (Emacs::Lisp 0.74) is just version 0.71 updated for use
-with Emacs 20.3.  You can't use it with a Perlmacs built from Emacs
-20.2, and you should not use earlier versions of Emacs::Lisp (<=0.71)
-with Emacs 20.3.  (They might seem to work, but they will crash or
-behave unpredictably.)  To summarize the version dependencies:
+This release (Emacs::Lisp 0.75) is essentially version 0.71 updated
+for use with Emacs 20.3.  You can't use it with a Perlmacs built from
+Emacs 20.2, and you should not use earlier versions of Emacs::Lisp
+(<=0.74) with Emacs 20.3.  (They might seem to work, but they will
+crash or behave unpredictably.)  To summarize the version
+dependencies:
 
    Emacs::Lisp	Emacs	Perl	Perlmacs
    ===========  =====   ====    ========
        0.71	20.2	5.004	0.6.2
-       0.74	20.3	5.004	0.6.2.2
-       0.75	20.3	5.005	0.7
+       0.75	20.3	5.004	0.6.2.2
+       0.??	20.3	5.005	0.7
 
 
 WHY
@@ -40,24 +41,21 @@ written in Perl, as well as Emacs Lisp.
 
 HOW
 ---
-You must first install PERL VERSION 5.004 or higher.  I have done
-minimal testing with the development Perl version 5.004_59 (WITHOUT
-thread support), and somewhat more with Perl 5.004_03.
-
-Your Perl must have working ExtUtils::Embed capabilities.  If not, the
-patched Emacs configure script will exclude Perl support, and you will
-have something close to standard GNU Emacs.  If you are unsure about
-this, watch the messages printed by `configure'.  If they say that
-Perl is embeddable, good.  If not, you might want to peek in the
-generated config.log for clues.
+You must first install PERL VERSION 5.004.  Your Perl must have
+working ExtUtils::Embed capabilities.  If not, the patched Emacs
+configure script will exclude Perl support, and you will have
+something close to standard GNU Emacs.  If you are unsure about this,
+watch the messages printed by `configure'.  If they say that Perl is
+embeddable, good.  If not, you might want to peek in the generated
+config.log for clues.
 
 Retrieve the Emacs 20.3 distribution from a location such as one of
 these:
 
-   ftp://prep.ai.mit.edu/pub/gnu/emacs-20.3.tar.gz
-   ftp://sunsite.unc.edu/pub/gnu/emacs-20.3.tar.gz
+   ftp://ftp.gnu.org/pub/gnu/emacs/emacs-20.3.tar.gz
+   ftp://metalab.unc.edu/pub/gnu/emacs/emacs-20.3.tar.gz
 
-You may want to grab the Elisp Manual, elisp-manual-19-2.4.2.tar.gz,
+You may want to grab the Elisp Manual, elisp-manual-20-2.5.tar.gz,
 while you're there.
 
 Retrieve Perlmacs patch version 0.6.2.2 from
@@ -109,13 +107,7 @@ Use `perldoc Emacs::Lisp' for documentation.
 CAVEATS
 -------
 As of this ALPHA version, crashes may occur, resulting in the loss of
-unsaved editing changes.  (But as far as I can tell, they occur only
-in specific circumstances which do not affect what I consider "normal"
-use.  I have been using a patched Emacs since Perlmacs version 0.3,
-and replaced my .emacs with a Perl script as of 0.6.  The only crashes
-have occurred during admittedly risky experiments involving nonlocal
-jumps.  Because I am careful to save my work often, I have not lost
-any data.)
+unsaved editing changes.
 
 This is not meant to be tried (yet) on anything other than Unix-like
 systems.  However, if you get it to work on non-unix, I would be

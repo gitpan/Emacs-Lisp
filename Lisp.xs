@@ -221,10 +221,11 @@ main(...)
 	      ST (0) = GvSV(gv_fetchpv("0", 1, SVt_PV));
 	    }
 
-	  argv = (char **) alloca (items * sizeof (char *));
+	  argv = (char **) alloca ((items + 1) * sizeof (char *));
 	  for (i = 0; i < items; i ++)
 	    /* FIXME: Would it be too paranoid if we strdup() the args?  */
 	    argv[i] = SvPV(ST(i), na);
+	  argv[items] = 0;
 
 	  sv_setsv(in_main, &sv_yes);
 	  RETVAL = perl_call_emacs_main (items, argv, 0);

@@ -20,7 +20,7 @@ require DynaLoader;
 
 @ISA = qw (Exporter DynaLoader);
 
-$VERSION = '0.74';
+$VERSION = '0.75';
 bootstrap Emacs::Lisp $VERSION;
 
 
