@@ -38,3 +38,6 @@ Added test.pl.
 
 0.70  Fri Mar 20 01:37:36  1998
 	Added `defun'.
+
+0.71  Sat Apr 11 02:11:36  1998
+	First attempts at coordinating %ENV with process-environment.

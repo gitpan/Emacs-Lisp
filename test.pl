@@ -6,6 +6,7 @@
 # use these subs in a BEGIN block before "use Emacs::Lisp"!
 sub setq (&);
 sub save_excursion (&);
+sub t ();	# prevents a core dump, at least w/ 5.004_03 + MULTIPLICITY
 
 BEGIN {
   @tests =
@@ -54,11 +55,31 @@ BEGIN {
      },
 
      sub {
-       &set_buffer (&get_buffer_create ("b1"));
+       $x = 1;
        save_excursion {
-	 &set_buffer (&get_buffer_create ("b2"));
-	 ! &eq (&current_buffer(), &get_buffer("b1"));
-       } and &eq (&current_buffer(), &get_buffer("b1"));
+	 &set_buffer (&get_buffer_create ("b1"));
+	 save_excursion {
+	   &set_buffer (&get_buffer_create ("b2"));
+	   $x++ unless &eq (&current_buffer(), &get_buffer("b1"));
+	 };
+	 $x++ if &eq (&current_buffer(), &get_buffer("b1"));
+       } == 2 && $x == 3;
+     },
+
+     sub {
+       $ENV{var} = "";
+       &setenv("var", 'yoohoo!');
+       $ENV{var} eq 'yoohoo!';
+     },
+
+     sub {
+       save_excursion {
+	 &set_buffer (&get_buffer_create ("test"));
+	 $ENV{TEST} = 'yowsa';
+	 &call_process($^X, undef, t, undef,
+		       '--perl', '-e', 'print $ENV{TEST}');
+	 &buffer_string() eq 'yowsa';
+       };
      },
     );
 }

@@ -12,7 +12,7 @@ unless (defined (&Emacs::Lisp::Object::DESTROY)) {
 use strict;
 no strict 'refs';
 use vars qw ($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS $AUTOLOAD
-	     %EXPORT);
+	     %EXPORT %ENV);
 my %special;
 
 require Exporter;
@@ -20,7 +20,7 @@ require DynaLoader;
 
 @ISA = qw (Exporter DynaLoader);
 
-$VERSION = '0.70';
+$VERSION = '0.71';
 bootstrap Emacs::Lisp $VERSION;
 
 
@@ -43,7 +43,44 @@ package Emacs::Lisp::Plist;
 sub TIEHASH	{ bless (\$_[1], $_[0]) }
 sub FETCH	{ &Emacs::Lisp::get(${$_[0]}, $_[1]) }
 sub STORE	{ &Emacs::Lisp::put(${$_[0]}, $_[1], $_[2]) }
-# XXX missing methods
+# XXX missing methods (does anyone care?)
+
+
+package Emacs::Lisp::Environment;
+
+# Try to keep %ENV more or less in sync with process-environment.
+# We're probably out of luck if someone does (let (process-environment)... )
+# or local(%ENV) or the like.
+
+use vars qw(%perl_env);
+*perl_env = \%ENV;
+
+sub Emacs::Lisp::setenv {
+  my ($var, $val) = @_;
+  $perl_env{$var} = $val;
+  &Emacs::Lisp::funcall(\*::setenv, @_);
+}
+
+sub TIEHASH	{ bless {}, $_[0] }
+sub FETCH	{ $perl_env{$_[1]} }
+sub STORE	{ &Emacs::Lisp::setenv($_[1], $_[2]) }
+sub EXISTS	{ exists $perl_env{$_[1]} }
+sub FIRSTKEY	{ keys %perl_env; each %perl_env; }
+sub NEXTKEY	{ each %perl_env; }
+
+sub DELETE {
+  shift;
+  my $var = shift;
+  &Emacs::Lisp::funcall(\*::setenv, $var, undef);
+  delete $perl_env{$var};
+}
+
+sub CLEAR {
+  &Emacs::Lisp::set(\*::process_environment, undef);
+  %perl_env = ();
+}
+
+tie %Emacs::Lisp::ENV, 'Emacs::Lisp::Environment';
 
 
 package Emacs::Lisp;
@@ -95,7 +132,11 @@ sub import {
 # it is in Exporter.pm. (?)
 
 %EXPORT_TAGS = (
-		'funcs' => [qw(funcall AUTOLOAD)],
+		'funcs' => [qw(
+			       funcall
+			       AUTOLOAD
+			       setenv
+			      )],
 		'special' => [qw(
 				 defun
 				 interactive
@@ -105,11 +146,13 @@ sub import {
 				 setq
 				 track_mouse
 				 )],
+		'process' => [qw(%ENV)],
 		);
 @EXPORT = (
 	   qw(t nil),
 	   @{$EXPORT_TAGS{'funcs'}},
 	   @{$EXPORT_TAGS{'special'}},
+	   @{$EXPORT_TAGS{'process'}},
 	  );
 
 sub t () { \*::t }
@@ -164,7 +207,7 @@ sub setq (&) {
   &$coderef;
 }
 
-sub interactive ($) {
+sub interactive (;$) {
   my $what = shift;
   bless \$what, 'Emacs::InteractiveSpec';
 }
@@ -269,8 +312,8 @@ you can use Perl, too.  This module allows Perl code to call functions
 and access variables of Lisp.  It also maps some Perl syntax into Lisp
 semantics.
 
-You still need to learn some Lisp in order to understand the Elisp
-Manual, which you will need if you wish to learn about the details of
+You still need to learn some Lisp in order to understand I<The Elisp
+Manual>, which you will need if you wish to learn about the details of
 Emacs programming.  Hopefully, this situation will be cured by the
 appearance of well-documented Perl modules that give everything in
 Emacs a nice, object-oriented wrapping.
@@ -495,7 +538,8 @@ hashes.
 Note that a plist is different from a Perl hash.  Lookups are not
 based on string equality as with Perl, but rather on Lisp object
 equality (of the C<eq> variety, I believe).  For this reason, it is
-best to stick to the Lisp convention of using only symbols as "keys".
+best to stick to the Lisp convention of using only I<symbols> as keys.
+(See L</Symbols>.)
 
 Emacs::Lisp provides a shorthand notation for getting and setting
 plist elements.  If you say C<use Emacs::Lisp qw(%any_name)>, then
@@ -551,7 +595,7 @@ sequence of keystrokes.  See the Emacs documentation for specifics.
 As in Emacs Lisp, when defining a command, you must specify the
 interactive nature of the command.  There are various codes to
 indicate that the command acts on the current region, a file name to
-be read from the minibuffer, etc.  Please see the Elisp Manual for
+be read from the minibuffer, etc.  Please see I<The Elisp Manual> for
 details.  Emacs::Lisp' C<defun> uses a value returned by
 C<interactive> as the SPEC for this purpose.  See L</interactive>.
 
@@ -567,7 +611,7 @@ which will be accessible through the Emacs help system (C<C-h f>).
 	 sub {
 	     my ($start, $end) = @_;
 	     my $text = &buffer_substring($start, $end);
-	     $text = join(' ', reverse split (/\s+/, $text));
+	     $text = join('', reverse split (/(\s+)/, $text));
 	     &delete_region($start, $end);
 	     &insert($text);
 	 });
@@ -580,7 +624,7 @@ Used to generate the third (or, in the absence of a doc string,
 second) argument to C<defun>, which see.  This determines how a
 command's arguments are obtained.
 
-SPEC may be a string as described in the Elisp Manual or a reference
+SPEC may be a string as described in I<The Elisp Manual> or a reference
 to code which returns the argument list.
 
 =item save_excursion BLOCK
@@ -589,7 +633,7 @@ Execute BLOCK within a Lisp C<save-excursion> construct.  This
 restores the current buffer and other settings to their original
 values after the code has completed.
 
-Please read the elisp manual for details.
+Please read I<The Elisp Manual> for details.
 
 =item setq BLOCK
 
@@ -655,12 +699,10 @@ passed to Perl's C<exit> soon, as in this code:
 
   exit (Emacs::main($0, @args));
 
-=item * %ENV, %SIG, `setenv'.
+=item * Perl's `local()' doesn't have the effect of Lisp's `let'.
 
-Perl and Emacs use environment variables and signal handlers in
-different, incompatible ways.  This needs to be coordinated.  This
-issue is not unique to Emacs but affects every nontrivial Perl
-embedding.  I don't know whether it's been solved in a general way.
+It should.  At least, there should be an easy way to make a local
+binding of a Lisp variable in Perl.
 
 =item * Input/Output.
 
@@ -670,10 +712,11 @@ messages to C<STDERR>, which can be disconcerting.  Perl's use of
 Standard I/O must be controlled.  (I shudder to think what would
 happen if you used Perl compiled with B<sfio>.)
 
-=item * Perl's `local()' doesn't have the effect of Lisp's `let'.
+=item * %ENV, %SIG, `setenv'.
 
-It should.  At least, there should be an easy way to make a local
-binding of a Lisp variable in Perl.
+Perl and Emacs use environment variables and signal handlers in
+different, incompatible ways.  This needs to be coordinated.  I've
+made a start with %ENV, but more needs to be done.
 
 =item * Probably can't use a coderef as an error handler or protected
 form.
@@ -684,7 +727,7 @@ I think this will be easy to fix, I just haven't had the need.
 `&Emacs::Lisp::Object::DESTROY' or the scalar value in an
 `Emacs::Lisp::Object' blessed reference.
 
-So don't.
+These would be somewhat tedious to fix.  Don't do these things.
 
 =back
 
@@ -728,7 +771,7 @@ Lisp.... but don't hold your breath.  ;-)
 
 Perl's C<eval> won't trap Lisp errors.  Lisp's C<condition-case> won't
 trap Perl errors, although C<perl-eval> will convert a Perl error into
-a Lisp error.
+a Lisp error (unlike C<perl-call>).
 
 =back
 
@@ -763,7 +806,7 @@ These are among the giants on whose shoulders we stand:
 
 =over 4
 
-=item Larry Wall.
+=item Larry Wall, inventor of Perl.
 
 'Nuff said.
 
@@ -772,9 +815,12 @@ These are among the giants on whose shoulders we stand:
 Many thanks for the most beautiful code base that it has ever been, or
 will ever likely be, my pleasure to hack.
 
-=item The inventor of Lisp, whose name presently escapes me.
+=item John McCarthy, inventor of Lisp.
 
-=item The inventors of Perl's truest mother language, C.
+=item The inventors of C.
+
+Both Perl and Emacs are written in C.  This whole thing kind of rests
+on that fact.
 
 =item Å…variste Galois (1811-1832) and Wolfgang Amadeus Mozart
 (1756-1791).
@@ -787,8 +833,7 @@ with a good mind.
 Showed that even neurotic, deaf, aging crabapples can, from time to
 time, engender lasting beauty.
 
-=item Tim Bunce, whom I associate with the `DynaLoader' module and the
-Perl5 Module List.
+=item Tim Bunce, author of the `DynaLoader' module and much else.
 
 I was lucky enough to come onto the Perl scene soon after dynamic
 loading had reached its present form (well, but before B<swig>
@@ -846,7 +891,7 @@ Emacs documentaion for full details.
 
 =head1 SEE ALSO
 
-L<perl>, B<emacs>, and the I<elisp manual> (available where you got
-the Emacs source ...one would hope).
+L<perl>, B<emacs>, and I<The Elisp Manual> (available where you got
+the Emacs source, or from ftp://prep.ai.mit.edu/pub/gnu/).
 
 =cut
