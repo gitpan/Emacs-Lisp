@@ -49,8 +49,9 @@ BEGIN {
        &get (\*zab, \*rab) eq 'oof';
      },
 
+### XXX commented out because they don't work any more!
      sub {
-       defun (\*funnie, "doc", &interactive(), sub { $_[0] + $_[1] });
+       defun (\*funnie, 'doc', &interactive(), sub { $_[0] + $_[1] });
        &funnie(45,60) == 105;
      },
 
@@ -78,6 +79,7 @@ BEGIN {
 	 $ENV{TEST} = 'yowsa';
 	 &call_process($^X, undef, t, undef,
 		       '--perl', '-e', 'print $ENV{TEST}');
+#	 print STDERR "buffer_string: >>".&buffer_string()."<<\n";
 	 &buffer_string() eq 'yowsa';
        };
      },

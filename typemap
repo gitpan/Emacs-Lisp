@@ -1,9 +1,0 @@
-Lisp_Object	O_LISP_OBJECT
-
-OUTPUT
-O_LISP_OBJECT
-    $arg = lisp_to_sv( $var );
-
-INPUT
-O_LISP_OBJECT
-    $var = sv_to_lisp( $arg );

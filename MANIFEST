@@ -6,4 +6,3 @@ Lisp.xs
 Makefile.PL
 README
 test.pl
-typemap

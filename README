@@ -1,5 +1,5 @@
 README for Perl module Emacs::Lisp
-last updated: 27 Feb 1999
+last updated: 2 Mar 1999
 
 ##################################################################
 ###### CAUTION ###### CAUTION ###### CAUTION ###### CAUTION ######
@@ -19,35 +19,42 @@ Perlmacs is a patch of GNU Emacs.  It creates a program that has all
 the functionality of both Perl and Emacs.  The Emacs::Lisp module
 allows Perl code to call functions and access variables of Lisp.
 
-This release (Emacs::Lisp 0.75) is essentially version 0.71 updated
-for use with Emacs 20.3.  You can't use it with a Perlmacs built from
-Emacs 20.2, and you should not use earlier versions of Emacs::Lisp
-(<=0.74) with Emacs 20.3.  (They might seem to work, but they will
-crash or behave unpredictably.)  To summarize the version
-dependencies:
+This release (Emacs::Lisp 0.78) uses features introduced in Perlmacs
+0.7, which requires Emacs 20.3 and Perl 5.005.  The following table
+lists which versions of the various packages work together:
 
    Emacs::Lisp	Emacs	Perl	Perlmacs
    ===========  =====   ====    ========
        0.71	20.2	5.004	0.6.2
        0.75	20.3	5.004	0.6.2.2
-       0.??	20.3	5.005	0.7
+       0.78	20.3	5.005	0.7
 
 
 WHY
 ---
 The intent is to allow Emacs modules and customization code to be
-written in Perl, as well as Emacs Lisp.
+written in Perl, as well as Emacs Lisp.  Because we can.  :-)
+
+Actually, my motives have mostly to do with becoming a better
+programmer and familiarizing myself with Perl and Emacs, two very
+important programs.  See
+http://www.tux.org/~niemi/opensource/developer-motivation.html for a
+nice explanation by David Niemi.
 
 
 HOW
 ---
-You must first install PERL VERSION 5.004.  Your Perl must have
-working ExtUtils::Embed capabilities.  If not, the patched Emacs
-configure script will exclude Perl support, and you will have
-something close to standard GNU Emacs.  If you are unsure about this,
-watch the messages printed by `configure'.  If they say that Perl is
-embeddable, good.  If not, you might want to peek in the generated
-config.log for clues.
+You must first install PERL VERSION 5.005 or higher.  If you get core
+dumps during process termination, I recommend you configure Perl with
+-Dusemymalloc=y.  So far, I have seen this problem only with the
+Emacs::Lisp test script, and using Perl's malloc seems to cure it.
+
+Your Perl must have working ExtUtils::Embed capabilities.  If not,
+`configure' will exclude Perl support, and you will have something
+close to standard GNU Emacs.  If you are unsure about this, watch the
+messages printed by `configure'.  If they say that Perl is embeddable,
+good.  If not, have a peek at the generated config.log file for clues,
+and mail me any workarounds.
 
 Retrieve the Emacs 20.3 distribution from a location such as one of
 these:
@@ -56,43 +63,43 @@ these:
    ftp://metalab.unc.edu/pub/gnu/emacs/emacs-20.3.tar.gz
 
 You may want to grab the Elisp Manual, elisp-manual-20-2.5.tar.gz,
-while you're there.
+while you're there.  (At this time, knowledge of Elisp is essential
+for programming with Emacs::Lisp.)
 
-Retrieve Perlmacs patch version 0.6.2.2 from
+Retrieve the latest Perlmacs patch from one of these locations:
 
-   http://www.perl.com/CPAN/authors/id/JTOBEY/emacs-20.3-perlmacs-0.6.2.2.pl.gz
+   http://www.perl.com/CPAN/authors/id/JTOBEY/emacs-20.3-perlmacs-*.pl.gz
+   http://www.john-edwin-tobey.org/perlmacs/src/emacs-20.3-perlmacs-*.pl.gz
 
-Then do
+(Substitute the highest version number, at least 0.7, for `*'.)  Then
+do
 
    gzip -dc emacs-20.3.tar.gz |tar xf -
    cd emacs-20.3
-   gzip -dc ../emacs-20.3-perlmacs-0.6.2.2.pl.gz |perl
+   gzip -dc ../emacs-20.3-perlmacs-*.pl.gz |perl
+
+Have a look at the patched README file for further information.  The
+basic procedure should be familiar:
+
    ./configure
    make
    make install
 
-NOTE: This will install the program as /usr/local/bin/emacs by default.
+This will, by default, install the program in /usr/local/bin under the
+names `pmacs' and `perlmacs'.  The program can parse its command line
+as either Perl or Emacs would, depending on whether "perl" appears in
+its name.  (Using `--perl' or `--emacs' as the first arg overrides
+this.)
 
-If you wish to use an installed version of Perl other than the one
+If you wish to use an installed version of perl other than the one
 that's in your $PATH, set the environment variable $PERL to the
 desired program when running configure.  For example, under bash or
 sh:
 
-   PERL=perl5.004 ./configure
+   PERL=perl5.005 ./configure
 
-However, this method has been know to fail sometimes.
-
-To build Emacs::Lisp, first make "perlmacs" a name for the emacs
-binary you just installed:
-
-   ln /usr/local/bin/emacs /usr/local/bin/perlmacs
-
-(This makes what follows simpler.  It will happen automatically in
-Perlmacs 0.7.)
-
-Then, do the usual commands for installing a module, but use
-`perlmacs' in place of `perl'.  (The program parses its command line
-like Perl if it is invoked by a name containing "perl".)
+Next, build the Emacs::Lisp module in the usual way, but use perlmacs
+in place of perl.
 
    gzip -dc Emacs-Lisp-*.tar.gz |tar xf -
    cd Emacs-Lisp-*
@@ -101,7 +108,17 @@ like Perl if it is invoked by a name containing "perl".)
    make test
    make install
 
-Use `perldoc Emacs::Lisp' for documentation.
+Most of the documentation for both the patch and the module is in
+perl/Emacs/Lisp/Lisp.pm and should be accessible after installation
+via
+
+   perldoc Emacs::Lisp
+
+Lisp functions, such as `perl-eval', also have Emacs docstrings
+accessible through `C-h f'.  No texinfo docs yet, sorry.
+
+For information on getting the latest source via anonymous CVS, see
+http://john-edwin-tobey.org/perlmacs/.
 
 
 CAVEATS
@@ -109,17 +126,26 @@ CAVEATS
 As of this ALPHA version, crashes may occur, resulting in the loss of
 unsaved editing changes.
 
-This is not meant to be tried (yet) on anything other than Unix-like
+This is not meant to be tried on anything other than Unix-like
 systems.  However, if you get it to work on non-unix, I would be
 delighted to hear about it!
 
 
 LICENSE
 -------
-This module, like all extensions to GNU Emacs, is licensed under the
-GNU General Public License.  See the files Lisp.pm and COPYING for
-details.
+This software is licensed under the GNU General Public License.  See
+the file COPYING for details.
 
 
--- John
-spam@john-edwin-tobey.org
+WARRANTY
+--------
+What!  Are you kidding?  Let's see, where's a copy of that
+disclaimer.... oh, here we go:
+
+    This software is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+
+Send bug reports and inquiries to John <jtobey@channel1.com>.

@@ -53,3 +53,6 @@ Added test.pl.
 
 0.75  Sat Feb 27 20:22:51 EST 1999
 	Emacs 20.3-related bugfix affecting Emacs::main.
+
+0.76  
+	Changed internals to work with Perlmacs 0.7.
