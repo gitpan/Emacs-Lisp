@@ -44,3 +44,6 @@ Added test.pl.
 
 0.72  Sun Feb 21 00:33:10 EST 1999
 	Fix something in funcall that Emacs 20.3 broke.
+
+0.73  Sun Feb 21 01:43:59 EST 1999
+	Fix installation instructions in README.

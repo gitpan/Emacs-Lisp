@@ -28,7 +28,7 @@ behave unpredictably.)  To summarize the version dependencies:
    Emacs::Lisp	Emacs	Perl	Perlmacs
    ===========  =====   ====    ========
        0.71	20.2	5.004	0.6.2
-       0.72	20.3	5.004	0.6.2.1
+       0.72	20.3	5.004	0.6.2.2
        0.73	20.3	5.005	0.7
 
 
@@ -60,15 +60,15 @@ these:
 You may want to grab the Elisp Manual, elisp-manual-19-2.4.2.tar.gz,
 while you're there.
 
-Retrieve Perlmacs patch version 0.6.2.1 from
+Retrieve Perlmacs patch version 0.6.2.2 from
 
-   http://www.perl.com/CPAN/authors/id/JTOBEY/emacs-20.3-perlmacs-0.6.2.1.pl.gz
+   http://www.perl.com/CPAN/authors/id/JTOBEY/emacs-20.3-perlmacs-0.6.2.2.pl.gz
 
 Then do
 
    gzip -dc emacs-20.3.tar.gz |tar xf -
    cd emacs-20.3
-   gzip -dc ../emacs-20.3-perlmacs-0.6.2.1.pl.gz |perl
+   gzip -dc ../emacs-20.3-perlmacs-0.6.2.2.pl.gz |perl
    ./configure
    make
    make install
@@ -84,31 +84,26 @@ sh:
 
 However, this method has been know to fail sometimes.
 
-To build Emacs::Lisp, do the following:
+To build Emacs::Lisp, first make "perlmacs" a name for the emacs
+binary you just installed:
+
+   ln /usr/local/bin/emacs /usr/local/bin/perlmacs
+
+(This makes what follows simpler.  It will happen automatically in
+Perlmacs 0.7.)
+
+Then, do the usual commands for installing a module, but use
+`perlmacs' in place of `perl'.  (The program parses its command line
+like Perl if it is invoked by a name containing "perl".)
 
    gzip -dc Emacs-Lisp-*.tar.gz |tar xf -
    cd Emacs-Lisp-*
-   emacs --perl Makefile.PL PERL='emacs --perl'
-   make test
-
-Note that the default `make' target triggers a bug in at least some
-versions of MakeMaker.  The symptom is the appearance of an Emacs
-window with an error message something like
-
-   Unknown option `-I/usr/local/lib/perl5/i586-linux/5.00403' .
-
-A fix is planned for a later version of Perlmacs, in which you will be
-able to omit the `--perl' switch if the program is installed as `perl'
-or `perlmacs'.  Until then, the workaround is to `make distclean' if
-you have built with `emacs --perl', and use the ordinary module build
-sequence instead; namely,
-
-   perl Makefile.PL
+   perlmacs Makefile.PL
    make
+   make test
    make install
 
-In this case, `make test' will fail due to the absence of Lisp support
-in the Perl binary, but the module should now be accessible by Emacs.
+Use `perldoc Emacs::Lisp' for documentation.
 
 
 CAVEATS
