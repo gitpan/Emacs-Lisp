@@ -63,3 +63,6 @@ Added test.pl.
 0.79  Thu Mar  4 02:35:36 EST 1999
 	Documentation overhaul, plus a temporary kludge to disable
 Perlification of Lisp lists.
+
+0.80  Sun Mar  7 01:24:25 EST 1999
+	Removed broken Emacs::Lisp::Plist::DELETE.

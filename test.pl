@@ -50,11 +50,6 @@ BEGIN {
      },
 
      sub {
-       delete $bar{\*baz};
-       &null ($bar{\*baz});
-     },
-
-     sub {
        %bar = (\*heh, 45);
        &equal (&symbol_plist (\*bar), [\*heh, 45]);
      },

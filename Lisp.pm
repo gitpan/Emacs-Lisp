@@ -21,7 +21,7 @@ require DynaLoader;
 
 @ISA = qw (Exporter DynaLoader);
 
-$VERSION = '0.79';
+$VERSION = '0.80';
 bootstrap Emacs::Lisp $VERSION;
 
 
@@ -66,17 +66,7 @@ sub EXISTS {
     return defined (memq_even (&Emacs::Lisp::symbol_plist ($$symbol), $key));
 }
 
-sub DELETE {
-    my ($symbol, $key) = @_;
-    my ($list);
-    $list = memq_even (&Emacs::Lisp::symbol_plist ($$symbol), $key);
-    if (defined ($list)) {
-	# XXX Warning:
-	# This WILL NOT WORK in a future Perlmacs version.
-	&Emacs::Lisp::setcdr ($list,
-			      &Emacs::Lisp::cdr (&Emacs::Lisp::cdr ($list)));
-    }
-}
+sub DELETE { Carp::croak "DELETE not implemented for Emacs::Lisp::Plist" }
 
 sub FIRSTKEY {
     my ($symbol) = @_;
