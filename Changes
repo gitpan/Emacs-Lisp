@@ -1,0 +1,37 @@
+Revision history for Perl extension Emacs::Lisp and the Perlmacs patch.
+
+0.01  Thu Dec 25 15:57:07 1997
+	- original version; created by h2xs 1.18
+Lisp functions are autoloaded and exported.  Variables may be explicitly
+imported.
+
+0.1  Thu Jan  1 19:43:20  1998
+	Can convert between references and Lisp objects.
+
+0.2  Sat Jan  3 19:04:22  1998
+	Lisp can specify scalar/list/void context.  Internal memory
+management issues mostly worked out, but still very unstable.
+
+0.3  Sun Jan 25 17:19:13  1998
+	./configure detects Perl features.  Guts evolving.
+
+0.4  Sat Feb  7 14:33:43  1998
+	Most Perl data types can be referenced by Lisp.  Symbols and
+typeglobs are equated.  `--perl' as the first command line arg causes
+the remaining args to be processed by Perl instead of Emacs.
+
+0.5  Sun Feb  8 19:25:14  1998
+	Added setq.  Typeglobs outside of package `main' do not become
+symbols.  Much added to pod.  Extensive rework of core C.
+
+0.5.1  Tue Feb 24 20:22:19  1998
+	Portability fixes.  Supported perl >= 5.004_50 (at least
+without threads).
+
+0.6  Sat Feb 28 20:09:30  1998
+	Fixed some core dumps.  Added some new ones.  Various minor
+interface tweaks.
+
+0.61  Sun Mar 15 11:30:15  1998
+	Split Emacs::Lisp out from the Perlmacs patch distribution.
+Added test.pl.

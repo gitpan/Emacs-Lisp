@@ -1,0 +1,110 @@
+File: Emacs-Lisp-0.61.readme
+
+##################################################################
+###### CAUTION ###### CAUTION ###### CAUTION ###### CAUTION ######
+##################################################################
+#######                                                    #######
+#######   THIS IS ALPHA SOFTWARE.  USE AT YOUR OWN RISK!   #######
+#######   NOT RESPONSIBLE FOR CRASHES OR LOST DATA!!!!!!!  #######
+#######                                                    #######
+##################################################################
+###### CAUTION ###### CAUTION ###### CAUTION ###### CAUTION ######
+##################################################################
+
+
+WHAT
+----
+Perlmacs creates a program that has all the functionality of both Perl
+and Emacs.  The Emacs::Lisp module allows Perl code to call functions
+and access variables of Lisp.
+
+
+WHY
+---
+The goal is to allow Emacs modules and customization code to be
+written in Perl, as well as Emacs Lisp.
+
+The task at hand is to discuss bugs, possible uses and interface
+details.  There is currently no specific mailing list or newsgroup for
+this purpose.  Please email me if you would like to set one up.
+
+
+HOW
+---
+You must first install PERL VERSION 5.004 or higher.  I have done
+minimal testing with the development Perl version 5.004_59, and
+somewhat more with Perl 5.004_03.
+
+Your perl must have working ExtUtils::Embed capabilities.  If not, the
+patched Emacs configure script will exclude Perl support, and you will
+have something close to standard GNU Emacs.  If you are unsure about
+this, watch the messages printed by `configure'.  If they say that
+Perl is embeddable, good.
+
+Retrieve the Emacs distribution from a location such as one of these:
+
+   ftp://prep.ai.mit.edu/pub/gnu/emacs-20.2.tar.gz
+   ftp://sunsite.unc.edu/pub/gnu/emacs-20.2.tar.gz
+
+Retrieve the Perlmacs patch from
+
+   http://www.perl.com/CPAN/authors/id/JTOBEY/emacs-20.2-perlmacs-0.6.1.pl.gz
+
+Then do
+
+   gzip -dc emacs-20.2.tar.gz |tar xf -
+   cd emacs-20.2
+   gzip -dc ../emacs-20.2-perlmacs-0.6.1.pl.gz |perl
+   ./configure
+   make
+   make install
+
+(This will install the program as /usr/local/bin/emacs, by default.)
+
+If you wish to use an installed version of Perl other than the one
+that's in your $PATH, set the environment variable $PERL to the
+desired program when running configure.  For example, under bash or
+sh:
+
+   PERL=perl5.004 ./configure
+
+Perlmacs 0.6.1 comes with Emacs::Lisp 0.6, but the module will be
+dropped from future Perlmacs distributions.  To build a newer version
+of Emacs::Lisp, do the following:
+
+   gzip -dc Emacs-Lisp-*.tar.gz |tar xf -
+   cd Emacs-Lisp
+   emacs --perl Makefile.PL PERL='emacs --perl'
+   make test
+
+Note that the default `make' target triggers a bug in at least some
+versions of MakeMaker.  The symptom is the appearance of an Emacs
+window with an error message something like
+
+   Unknown option `-I/usr/local/lib/perl5/i586-linux/5.00403' .
+
+A fix is planned for a later version of Perlmacs, in which you will be
+able to omit the `--perl' switch if the program is installed as `perl'
+or `perlmacs'.  Until then, the workaround is to `make distclean' if
+you have built with `emacs --perl', and use the ordinary module build
+sequence instead, namely,
+
+   perl Makefile.PL
+   make
+   make install
+
+In this case, `make test' will fail due to the absence of Lisp support
+in the Perl binary.
+
+
+CAVEATS
+-------
+As of this ALPHA version, crashes are many, and examples are few.
+
+This is not meant to be tried on anything other than Unix-like
+systems.  However, if you get it to work on non-unix, I would be
+delighted to hear about it!
+
+
+-- John
+jtobey@channel1.com
