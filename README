@@ -1,4 +1,5 @@
-File: Emacs-Lisp-0.61.readme
+README for Perl module Emacs::Lisp
+last updated: 29 Mar 1998
 
 ##################################################################
 ###### CAUTION ###### CAUTION ###### CAUTION ###### CAUTION ######
@@ -15,18 +16,14 @@ File: Emacs-Lisp-0.61.readme
 WHAT
 ----
 Perlmacs creates a program that has all the functionality of both Perl
-and Emacs.  The Emacs::Lisp module allows Perl code to call functions
-and access variables of Lisp.
+and GNU Emacs.  The Emacs::Lisp module allows Perl code to call
+functions and access variables of Lisp.
 
 
 WHY
 ---
-The goal is to allow Emacs modules and customization code to be
-written in Perl, as well as Emacs Lisp.
-
-The task at hand is to discuss bugs, possible uses and interface
-details.  There is currently no specific mailing list or newsgroup for
-this purpose.  Please email me if you would like to set one up.
+To allow Emacs modules and customization code to be written in Perl,
+as well as Emacs Lisp.
 
 
 HOW
@@ -41,20 +38,21 @@ have something close to standard GNU Emacs.  If you are unsure about
 this, watch the messages printed by `configure'.  If they say that
 Perl is embeddable, good.
 
-Retrieve the Emacs distribution from a location such as one of these:
+Retrieve the Emacs 20.2 distribution from a location such as one of
+these:
 
    ftp://prep.ai.mit.edu/pub/gnu/emacs-20.2.tar.gz
    ftp://sunsite.unc.edu/pub/gnu/emacs-20.2.tar.gz
 
 Retrieve the Perlmacs patch from
 
-   http://www.perl.com/CPAN/authors/id/JTOBEY/emacs-20.2-perlmacs-0.6.1.pl.gz
+   http://www.perl.com/CPAN/authors/id/JTOBEY/emacs-20.2-perlmacs-0.6.2.pl.gz
 
-Then do
+(Be sure to get the latest version; currently, that's 0.6.2.)  Then do
 
    gzip -dc emacs-20.2.tar.gz |tar xf -
    cd emacs-20.2
-   gzip -dc ../emacs-20.2-perlmacs-0.6.1.pl.gz |perl
+   gzip -dc ../emacs-20.2-perlmacs-0.6.2.pl.gz |perl
    ./configure
    make
    make install
@@ -68,12 +66,11 @@ sh:
 
    PERL=perl5.004 ./configure
 
-Perlmacs 0.6.1 comes with Emacs::Lisp 0.6, but the module will be
-dropped from future Perlmacs distributions.  To build a newer version
-of Emacs::Lisp, do the following:
+To build Emacs::Lisp, do the following (substituting the appropriate
+version number for `*'):
 
    gzip -dc Emacs-Lisp-*.tar.gz |tar xf -
-   cd Emacs-Lisp
+   cd Emacs-Lisp-*
    emacs --perl Makefile.PL PERL='emacs --perl'
    make test
 
@@ -87,23 +84,36 @@ A fix is planned for a later version of Perlmacs, in which you will be
 able to omit the `--perl' switch if the program is installed as `perl'
 or `perlmacs'.  Until then, the workaround is to `make distclean' if
 you have built with `emacs --perl', and use the ordinary module build
-sequence instead, namely,
+sequence instead; namely,
 
    perl Makefile.PL
    make
    make install
 
 In this case, `make test' will fail due to the absence of Lisp support
-in the Perl binary.
+in the Perl binary, but the module should now be accessible by Emacs.
 
 
 CAVEATS
 -------
-As of this ALPHA version, crashes are many, and examples are few.
+As of this ALPHA version, crashes may occur, resulting in the loss of
+unsaved editing changes.  (But as far as I can tell, they occur only
+in specific circumstances which do not affect what I consider "normal"
+use.  I have been using a patched Emacs since Perlmacs version 0.3,
+and replaced my .emacs with a Perl script as of 0.6.  The only crashes
+have occurred during admittedly risky experiments involving nonlocal
+jumps.  Because I am careful to save my work often, I have not lost
+any data.)
 
-This is not meant to be tried on anything other than Unix-like
+This is not meant to be tried (yet) on anything other than Unix-like
 systems.  However, if you get it to work on non-unix, I would be
 delighted to hear about it!
+
+
+LICENSE
+-------
+This module, like all extensions to GNU Emacs, is licensed under the
+GNU General Public License.
 
 
 -- John

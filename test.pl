@@ -1,7 +1,11 @@
 # Before `make install' is performed this script should be runnable with
 # `make test'. After `make install' it should work as `perl test.pl'
 
+#
+# Prototypes like this are normally not necessary, but we
+# use these subs in a BEGIN block before "use Emacs::Lisp"!
 sub setq (&);
+sub save_excursion (&);
 
 BEGIN {
   @tests =
@@ -42,6 +46,19 @@ BEGIN {
      sub {
        setq { $zab{\*rab} = 'oof' };
        &get (\*zab, \*rab) eq 'oof';
+     },
+
+     sub {
+       defun (\*funnie, "doc", &interactive(), sub { $_[0] + $_[1] });
+       &funnie(45,60) == 105;
+     },
+
+     sub {
+       &set_buffer (&get_buffer_create ("b1"));
+       save_excursion {
+	 &set_buffer (&get_buffer_create ("b2"));
+	 ! &eq (&current_buffer(), &get_buffer("b1"));
+       } and &eq (&current_buffer(), &get_buffer("b1"));
      },
     );
 }
