@@ -7,9 +7,12 @@ package Emacs::Lisp;
 use 5.005;  # This version requires Perlmacs 0.9, which requires 5.005.
 use Carp;
 
-# This is, at least for now, the canonical way to test for Perlmacs.
-unless (defined (&Emacs::Lisp::Object::DESTROY)) {
-  croak ("Emacs::Lisp can only be used by a perl embedded in GNU Emacs");
+# Test for Perlmacs.
+unless (defined (&Emacs::Lisp::Object::DESTROY) # pre Perlmacs 0.10
+	or defined (&Emacs::constant))
+{
+  croak ("Emacs::Lisp can only be used by Perl embedded in GNU Emacs.\n"
+	 ."Try using `perlmacs' instead of `$^X'.\n");
 }
 
 use strict;
@@ -22,7 +25,7 @@ require Exporter;
 require DynaLoader;
 
 @ISA = qw (Exporter DynaLoader);
-$VERSION = '0.88';
+$VERSION = '0.89';
 bootstrap Emacs::Lisp $VERSION;
 
 # Closure generator shared by Emacs::Lisp::AUTOLOAD and
@@ -49,10 +52,13 @@ my $get_funcall_closure = sub {
     }
     $function = \*{"::$function"};
     $whose_funcall .= "::funcall";
-    return *$fullname = sub { &$whose_funcall ($function, @_) };
+    *$fullname = sub {
+	package main;
+	&$whose_funcall ($function, @_)
+    };
+    return \&$fullname;
 };
 
-# FIXME: need test for this.
 my $can = sub {
     my ($symbol);
     $symbol = \*{"::$_[1]"};
@@ -60,7 +66,7 @@ my $can = sub {
 	and do {
 	    my ($f);
 	    $f = Emacs::Lisp::Object::symbol_function ($symbol);
-	    (not $f->consp->is_nil) or $f->car->eq (\*::macro)->is_nil;
+	    ($f->consp->is_nil) or $f->car->eq (\*::macro)->is_nil;
 	}) {
 	return eval { &$get_funcall_closure };
     }
@@ -368,7 +374,7 @@ Emacs::Lisp - Low-level support for Perl embedded in GNU Emacs
   setq { $cperl_font_lock = t };
 
   &add_hook(\*find_file_hooks,
-	    sub { &message("found a file!") });
+            sub { &message("found a file!") });
 
   use Emacs::Lisp qw($emacs_version $perlmacs_version);
   save_excursion {
@@ -403,17 +409,17 @@ or the command line, independently of the Emacs::Lisp module.
 Some Perl-related functions are built into Lisp.  Use `C<C-h f
 E<lt>function-nameE<gt> RET>' within Emacs for documentation on these.
 
-  perl-eval-expression	EXPRESSION
-  perl-eval-region	START END
+  perl-eval-expression  EXPRESSION
+  perl-eval-region      START END
   perl-eval-buffer
-  perl-load-file	NAME
-  perl-eval		STRING &optional CONTEXT
-  perl-call		SUB &optional CONTEXT &rest ARGS
-  make-perl-interpreter	&rest ARGV
+  perl-load-file        NAME
+  perl-eval             STRING &optional CONTEXT
+  perl-call             SUB &optional CONTEXT &rest ARGS
+  make-perl-interpreter &rest ARGV
   get-perl-interpreter
-  set-perl-interpreter	INTERPRETER
-  perl-run		&optional INTERPRETER
-  perl-destruct		&optional INTERPRETER
+  set-perl-interpreter  INTERPRETER
+  perl-run              &optional INTERPRETER
+  perl-destruct         &optional INTERPRETER
 
 =head2 Data Conversions
 
@@ -436,18 +442,13 @@ sets the Lisp variable C<x> to the I<Lisp> integer 16, whereas
   setq { $x = \16 };
 
 sets it to an object of type C<perl-scalar> which holds a I<Perl>
-number 16.  I find this to be intuitively correct behavior.
+number 16.
 
-=item * As an exception to the previous rule, arrayrefs become lists.
+=item * There are exceptions to the previous rule.
 
 Lists are a central data structure in Lisp.  To make it as easy as
-possible to pass lists to Lisp functions that require them, I think it
-is necessary to perform a double dereference when converting Perl
-array references.  (By "double dereference" I mean that C<\@a> is
-dereferenced once to produce C<@a>, and again to get C<$a[0]>,
-C<$a[1]>, and so on.)
-
-Therefore, a Perl expression such as
+possible to pass lists to Lisp functions that require them, Perl array
+references become Lisp lists.  Therefore, a Perl expression such as
 
   ["x", ["y", 1]]
 
@@ -455,7 +456,9 @@ is converted to
 
   '("x" ("y" 1))
 
-in Lisp.
+in Lisp.  Likewise, there is a convenient way to construct Lisp
+vectors.  Just add \ to the arrayref to make it an arrayref ref.  For
+example, C<\[1, 2, undef]> becomes C<[1 2 nil]>.
 
 This kind of conversion entails quite a bit of overhead and precludes
 "passing by reference" between the two languages, since it is a "deep"
@@ -463,10 +466,22 @@ copying operation.  Changes made by Lisp to the list will not affect
 the Perl array of which it is a copy.
 
 All of the above comments apply in reverse when one converts Lisp
-lists to Perl.
+lists and vectors to Perl.  If you would rather deal in shallow
+copies, use the "C<lisp>" function and/or the Emacs::Lisp::Object
+function space, e.g.:
 
-=item * Converting a non-dereferenceable value requires some kind of
-primitive conversion.
+  $x = lisp [1, 2, 3];
+  print ref($x);           # "Emacs::Lisp::Object"
+  print ref($x->to_perl);  # "ARRAY"
+  print @{&list(2, 3)};    # "23"
+
+  $x = Emacs::Lisp::Object::list(2, 3);
+  print ref($x);           # "Emacs::Lisp::Object"
+  print @{$x->to_perl};    # "23"
+
+But see L</CAVEATS> about storing references to Lisp objects.
+
+=item * Similar types are converted to each other.
 
 Lisp integers, floats, and strings all become Perl scalars.  A scalar
 (other than a reference) converted to Lisp will become either an
@@ -717,15 +732,15 @@ reverse-region-words RET>').
 
   use Emacs::Lisp;
   defun (\*reverse_region_words,
-	 "Reverse the order of the words in the region.",
-	 interactive("r"),
-	 sub {
-	     my ($start, $end) = @_;
-	     my $text = &buffer_substring($start, $end);
-	     $text = join('', reverse split (/(\s+)/, $text));
-	     &delete_region($start, $end);
-	     &insert($text);
-	 });
+         "Reverse the order of the words in the region.",
+         interactive("r"),
+         sub {
+             my ($start, $end) = @_;
+             my $text = &buffer_substring($start, $end);
+             $text = join('', reverse split (/(\s+)/, $text));
+             &delete_region($start, $end);
+             &insert($text);
+         });
 
 =item interactive SPEC
 
@@ -793,6 +808,11 @@ also the file F<BUGS> in the Perlmacs distribution.  If you find other
 bugs, please check that you have the latest version, and email me.
 
 =over 4
+
+=item * Within Lisp code, everything defaults to package `main'.
+
+I don't see an easy way around this without sacrificing some elegance
+and efficiency.  Maybe it's not a big problem.
 
 =item * Perl's `local()' doesn't have the effect of Lisp's `let'.
 
@@ -901,7 +921,8 @@ These are among the giants on whose shoulders we stand:
 =item The developers of GNU, and Richard Stallman in particular.
 
 Many thanks for the most beautiful code base that it has ever been, or
-will ever likely be, my pleasure to hack.
+will ever likely be, my pleasure to hack.  Perlmacs is largely a
+product of GDB, the GNU debugger.
 
 =item John McCarthy, inventor of Lisp.
 

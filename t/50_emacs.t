@@ -12,12 +12,12 @@
 	(and (eq 'bla
 		 (catch 'oofda
 		   (setq x 3)
-		   (perl-eval "&throw (\\*::oofda, \\*::bla)")
+		   (perl-eval "&throw (\\*oofda, \\*bla)")
 		   (setq x 5)))
 	     (eq x 3))
 	(eq 'oofda
 	    (catch 'bla
-	      (perl-eval "&perl_eval (q(&throw (\\*::bla, \\*::oofda)))")))
+	      (perl-eval "&perl_eval (q(&throw (\\*bla, \\*oofda)))")))
 	))
 
 (setq standard-output t)

@@ -1,5 +1,5 @@
 README for Perl module Emacs::Lisp
-last updated: 19 Mar 1999
+last updated: 20 Mar 1999
 
 ##################################################################
 ###### CAUTION ###### CAUTION ###### CAUTION ###### CAUTION ######
@@ -29,7 +29,7 @@ which versions of the various packages work together:
        0.75	20.3	5.004	0.6.2.2
        0.80  	20.3	5.005	0.7.1
        0.84  	20.3	5.005	0.8
-       0.88  	20.3	5.005	0.9
+       0.88+ 	20.3	5.005	0.9+
 
 
 WHY
@@ -46,7 +46,7 @@ nice explanation by David Niemi.
 As for why anyone would want to install Perlmacs, your guess is as
 good as mine.  One brave soul emailed me to say that he had made
 Perlmacs "a very important tool" for his y2k consulting work.  You can
-see his code at http://john-edwin-tobey.org/.
+see his code at http://john-edwin-tobey.org/perlmacs/.
 
 
 HOW
@@ -93,8 +93,11 @@ This will, by default, install the program in /usr/local/bin under the
 names `pmacs' and `perlmacs'.  The program can parse its command line
 as either Perl or Emacs would, depending on whether "perl" appears in
 its name.  (Using `--perl' or `--emacs' as the first arg overrides
-this.)  (If you want, you *could* install it as `perl' and `emacs'
-with probably no ill effects other than slower startup.)
+this.)
+
+(If you want, you *could* install it as `perl' and `emacs' with
+probably no ill effects other than slower startup, but there would be
+a possibility of nastiness due to Emacs' unclean C namespace.)
 
 If you wish to use an installed version of perl other than the one
 that's in your $PATH, set the environment variable $PERL to the

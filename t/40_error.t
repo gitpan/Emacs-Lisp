@@ -31,7 +31,7 @@ use Emacs::Lisp;
      },
      sub {
 	 use Emacs::Lisp qw($err $x);
-	 sub signalbla { &signal (\*::arith_error, [26, 4, 33]) }
+	 sub signalbla { &signal (\*arith_error, [26, 4, 33]) }
 	 &eval (&read (q((condition-case var
 			  (progn (setq x 8)
 			   (perl-call "::signalbla")
@@ -48,13 +48,13 @@ use Emacs::Lisp;
 	 ($@ =~ /^41971/, $@);
      },
      sub {
-	 69399 == catch \*::arith_error, sub {
-	     &throw (\*::arith_error, 69399);
+	 69399 == catch \*arith_error, sub {
+	     &throw (\*arith_error, 69399);
 	 };
      },
      sub {
-	 37510 == catch \*::arith_error, sub {
-	     &perl_eval (q(&throw (\*::arith_error, 37510)));
+	 37510 == catch \*arith_error, sub {
+	     &perl_eval (q(&throw (\*arith_error, 37510)));
 	 };
      },
 

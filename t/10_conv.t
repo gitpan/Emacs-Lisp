@@ -13,20 +13,30 @@ use Emacs::Lisp;
 @tests =
     (
      sub { &eq (1, 1) },
-    sub { ! &eq (1, "1") },
-    sub { &eq (&intern("integer"), \*::integer) },
-    sub { &eq (&type_of (1), \*::integer) },
-    sub { &eq (&type_of ("1"), \*::string) },
-    sub { &eq (&type_of (1.0), \*::float) },
-    sub { &type_of (\1) eq \*::perl_scalar },
-    sub { &type_of ([1]) eq \*::cons },
-    sub { &type_of (lisp [1]) == \*::perl_array },
+     sub { ! &eq (1, "1") },
+     sub { &eq (&intern("integer"), \*integer) },
+     sub { &eq (&type_of (1), \*integer) },
+     sub { &eq (&type_of ("1"), \*string) },
+     sub { &eq (&type_of (1.0), \*float) },
+     sub { &type_of (\1) eq \*perl_scalar },
+     sub { &type_of ([1]) eq \*cons },
+     sub { &type_of (lisp [1]) == \*perl_array },
 
-    sub {
-	my $x = &cdr ([1, 2, 3]);
-	$#$x == 1 && $x->[0] == 2 && $x->[1] == 3;
-    },
+     sub {
+	 my $x = &cdr ([1, 2, 3]);
+	 $#$x == 1 && $x->[0] == 2 && $x->[1] == 3;
+     },
+     sub { "@{Emacs::Lisp->can('list')->(5,2)}" eq "5 2" },
+     sub { "@{Emacs::Lisp::Object->can('list')->(3,4)->to_perl}" eq "3 4" },
     );
+if (defined &Emacs::constant) {
+    # added in Perlmacs 0.10
+    push @tests,
+    (
+     sub { &aref (\ [8, 7, 6], 2) == 6 },
+     sub { $#${&make_vector (5, undef)} == 4 },
+    );
+}
 
 print "1..".@tests."\n";
 $test_number = 1;
