@@ -251,7 +251,8 @@ funcall(...)
 	  }
 	  RETVAL = catchlist ? perl_call_lisp(items, args)
 	    : internal_condition_case_1(perl_enter_lisp,
-					make_string ((char *) args, len),
+					make_unibyte_string ((char *) args,
+							     len),
 					Qt, perlmacs_error_handler);
 	}
 	OUTPUT:

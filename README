@@ -1,5 +1,5 @@
 README for Perl module Emacs::Lisp
-last updated: 11 Apr 1998
+last updated: 21 Feb 1999
 
 ##################################################################
 ###### CAUTION ###### CAUTION ###### CAUTION ###### CAUTION ######
@@ -15,9 +15,21 @@ last updated: 11 Apr 1998
 
 WHAT
 ----
-Perlmacs is a patch of GNU Emacs 20.2.  It creates a program that has
-all the functionality of both Perl and Emacs.  The Emacs::Lisp module
+Perlmacs is a patch of GNU Emacs.  It creates a program that has all
+the functionality of both Perl and Emacs.  The Emacs::Lisp module
 allows Perl code to call functions and access variables of Lisp.
+
+This release (Emacs::Lisp 0.72) is just version 0.71 updated for use
+with Emacs 20.3.  You can't use it with a Perlmacs built from Emacs
+20.2, and you should not use earlier versions of Emacs::Lisp (<=0.71)
+with Emacs 20.3.  (They might seem to work, but they will crash or
+behave unpredictably.)  To summarize the version dependencies:
+
+   Emacs::Lisp	Emacs	Perl	Perlmacs
+   ===========  =====   ====    ========
+       0.71	20.2	5.004	0.6.2
+       0.72	20.3	5.004	0.6.2.1
+       0.73	20.3	5.005	0.7
 
 
 WHY
@@ -39,24 +51,24 @@ this, watch the messages printed by `configure'.  If they say that
 Perl is embeddable, good.  If not, you might want to peek in the
 generated config.log for clues.
 
-Retrieve the Emacs 20.2 distribution from a location such as one of
+Retrieve the Emacs 20.3 distribution from a location such as one of
 these:
 
-   ftp://prep.ai.mit.edu/pub/gnu/emacs-20.2.tar.gz
-   ftp://sunsite.unc.edu/pub/gnu/emacs-20.2.tar.gz
+   ftp://prep.ai.mit.edu/pub/gnu/emacs-20.3.tar.gz
+   ftp://sunsite.unc.edu/pub/gnu/emacs-20.3.tar.gz
 
 You may want to grab the Elisp Manual, elisp-manual-19-2.4.2.tar.gz,
 while you're there.
 
-Retrieve the latest Perlmacs patch from
+Retrieve Perlmacs patch version 0.6.2.1 from
 
-   http://www.perl.com/CPAN/authors/id/JTOBEY/emacs-20.2-perlmacs-*.pl.gz
+   http://www.perl.com/CPAN/authors/id/JTOBEY/emacs-20.3-perlmacs-0.6.2.1.pl.gz
 
-(Substitute the highest version number for `*'.)  Then do
+Then do
 
-   gzip -dc emacs-20.2.tar.gz |tar xf -
-   cd emacs-20.2
-   gzip -dc ../emacs-20.2-perlmacs-*.pl.gz |perl
+   gzip -dc emacs-20.3.tar.gz |tar xf -
+   cd emacs-20.3
+   gzip -dc ../emacs-20.3-perlmacs-0.6.2.1.pl.gz |perl
    ./configure
    make
    make install
@@ -69,6 +81,8 @@ desired program when running configure.  For example, under bash or
 sh:
 
    PERL=perl5.004 ./configure
+
+However, this method has been know to fail sometimes.
 
 To build Emacs::Lisp, do the following:
 
@@ -121,4 +135,4 @@ details.
 
 
 -- John
-jtobey@channel1.com
+spam@john-edwin-tobey.org
