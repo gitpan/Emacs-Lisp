@@ -21,7 +21,7 @@ require DynaLoader;
 
 @ISA = qw (Exporter DynaLoader);
 
-$VERSION = '0.83';
+$VERSION = '0.84';
 bootstrap Emacs::Lisp $VERSION;
 
 
@@ -213,29 +213,35 @@ sub import {
 # as a closure/hook if there already is one.  Maybe the place to fix
 # it is in Exporter.pm. (?)
 
-%EXPORT_TAGS = (
-		'funcs' => [qw(
-			       funcall
-			       AUTOLOAD
-			       setenv
-			      )],
-		'special' => [qw(
-				 defun
-				 interactive
-				 save_current_buffer
-				 save_excursion
-				 save_restriction
-				 setq
-				 track_mouse
-				 )],
-		'process' => [qw(%ENV)],
-		);
-@EXPORT = (
-	   qw(t nil),
-	   @{$EXPORT_TAGS{'funcs'}},
-	   @{$EXPORT_TAGS{'special'}},
-	   @{$EXPORT_TAGS{'process'}},
-	  );
+%EXPORT_TAGS =
+    (
+     funcs	=> [qw(
+		       funcall
+		       AUTOLOAD
+		       setenv
+		       )],
+     special	=> [qw(
+		       defun
+		       interactive
+		       save_current_buffer
+		       save_excursion
+		       save_restriction
+		       setq
+		       track_mouse
+		       )],
+     extra	=> [qw(
+		       lisp
+		       t
+		       nil
+		       )],
+     # XXX  %ENV, along with %SIG, STDIN, etc, will probably
+     # go in Emacs.pm.
+     process => [qw(%ENV)],
+     );
+
+# Sorry guys, but you know Emacs is a hog.
+@EXPORT = map { @$_ } values %EXPORT_TAGS;
+# Is it too hard to add () after "use Emacs::Lisp"?
 
 sub t () { \*::t }
 sub nil () { undef }
@@ -274,7 +280,7 @@ sub AUTOLOAD {
   'let*'		=> '*let',
   'let'			=> "functionality to be added",
   'while'		=> "use Perl's `for', `while' or `until' instead",
-  'catch'		=> "functionality to be added",
+  'catch'		=> "use Perl's `next LABEL' or `return', for example",
   'unwind-protect'	=> "functionality to be added",
   'condition-case'	=> "use Perl's `eval' instead",
   'ml-if'		=> undef,
@@ -354,7 +360,7 @@ __END__
 
 =head1 NAME
 
-Emacs::Lisp - Support for Perl embedded in GNU Emacs
+Emacs::Lisp - Low-level support for Perl embedded in GNU Emacs
 
 =head1 SYNOPSIS
 
@@ -363,7 +369,7 @@ Emacs::Lisp - Support for Perl embedded in GNU Emacs
   M-x perl-eval-expression RET 2+2 RET
   M-x perl-eval-region RET
   M-x perl-eval-buffer RET
-  ... and more...
+  ... and more ...
 
 =head2 In Perl
 
@@ -407,8 +413,8 @@ or the command line, independently of the Emacs::Lisp module.
 
 =head2 Functions
 
-Some Perl-related functions are built into Lisp.  Use C<C-h f
-E<lt>function-nameE<gt> RET> within Emacs for documentation on these.
+Some Perl-related functions are built into Lisp.  Use `C<C-h f
+E<lt>function-nameE<gt> RET>' within Emacs for documentation on these.
 
   perl-eval-expression	EXPRESSION
   perl-eval-region	START END
@@ -424,9 +430,9 @@ E<lt>function-nameE<gt> RET> within Emacs for documentation on these.
 
 =head2 Data Conversions
 
-When data is passed between Lisp and Perl within Emacs, some basic
-principles apply.  These are goals that will never be entirely met,
-due to the differences between Perl and Lisp.
+When data is passed between Lisp and Perl, some basic principles
+apply.  These are goals that will never be entirely met, due to the
+differences between Perl and Lisp.
 
 =over 4
 
@@ -443,9 +449,7 @@ sets the Lisp variable C<x> to the I<Lisp> integer 16, whereas
   setq { $x = \16 };
 
 sets it to an object of type C<perl-scalar> which holds a I<Perl>
-number 16.  I find this to be intuitively correct behavior.  See
-L</TO DO> for a (not yet implemented) way to override the default
-conversion.
+number 16.  I find this to be intuitively correct behavior.
 
 =item * As an exception to the previous rule, arrayrefs become lists.
 
@@ -454,7 +458,9 @@ possible to pass lists to Lisp functions that require them, I think it
 is necessary to perform a double dereference when converting Perl
 array references.  (By "double dereference" I mean that C<\@a> is
 dereferenced once to produce C<@a>, and again to get C<$a[0]>,
-C<$a[1]>, and so on.)  Therefore, a Perl expression such as
+C<$a[1]>, and so on.)
+
+Therefore, a Perl expression such as
 
   ["x", ["y", 1]]
 
@@ -469,16 +475,17 @@ This kind of conversion entails quite a bit of overhead and precludes
 copying operation.  Changes made by Lisp to the list will not affect
 the Perl array of which it is a copy.
 
-See L</TO DO> for a (not yet implemented) solution to this problem.
+All of the above comments apply in reverse when one converts Lisp
+lists to Perl.
 
 =item * Converting a non-dereferenceable value requires some kind of
 primitive conversion.
 
-For example, Lisp integers, floats, and strings all become Perl
-scalars.  A scalar (other than a reference) converted to Lisp will
-become either an integer, a float, or a string.  Glob references in
-package C<main> become symbols in Lisp (subject to the usual
-underscore-to-hyphen translation).
+Lisp integers, floats, and strings all become Perl scalars.  A scalar
+(other than a reference) converted to Lisp will become either an
+integer, a float, or a string.  Glob references in package C<main>
+become symbols in Lisp (subject to the usual underscore-to-hyphen
+translation).
 
 =item * Lisp's `nil' is equivalent to Perl's `undef' or `()'.
 
@@ -488,10 +495,11 @@ references) evaluate to I<true> in boolean contexts.  Converting
 C<nil> to anything other than C<undef> would be disastrous for
 programmers' mental health!
 
-=item * Generally, converted values can be converted back to Perl more
-or less unchanged.
+=item * Generally, converted values can be converted back to Perl
+unchanged (but often copied).
 
-But not always.  For example, C<\*nil> would become C<undef>.
+There are, however, exceptions.  For example, C<\*::nil> would become
+C<undef>.
 
 =item * Lisp objects which are not Perl stuff and have no natural
 counterpart become `Emacs::Lisp::Object' blessed references.
@@ -508,18 +516,22 @@ Perlmacs can run Perl programs.  By default, Perlmacs is installed
 under two names, B<pmacs> and B<perlmacs>.  Which name is used to
 invoke the program can determine how it parses its command line.
 
-If B<perlmacs> is used (or, more generally, any name containing
+If B<perlmacs> is used (or, to be precise, any name containing
 "B<perl>"), it behaves like Perl (expecting a script, etc.).
 Otherwise, it behaves like Emacs (opening a window, creating a buffer,
-etc.)  In either case, the first command line arg can take precedence.
-If it is B<--emacs>, Emacs takes control.  If it is B<--perl>, we play
-by Perl's rules.
+etc.).  In either case, the first command line argument can take
+precedence.  If it is B<--emacs>, Emacs takes control.  If it is
+B<--perl>, we play by Perl's rules.
 
 When you C<use Emacs::Lisp> in a B<perlmacs> script, a Perl sub named
-C<Emacs::main> may be used to invoke the Emacs editor.  This makes it
-possible to put customization code, which would normally appear as
-Lisp in F<~/.emacs>, into a Perl script.  For example, this startup
-code
+C<Emacs::main> may be used to invoke the Emacs editor.
+
+B<NOTE: This section is highly subject to change.  There will be a
+separate Emacs module, which will be independent of C<Emacs::Lisp>.>
+
+This makes it possible to put customization code, which would normally
+appear as Lisp in F<~/.emacs>, into a Perl script.  For example, this
+startup code
 
   (setq
    user-mail-address "gnaeus@perl.moc"
@@ -570,8 +582,8 @@ and handle Lisp variables using Perl's syntax.
 You don't have to do any work, other than C<use Emacs::Lisp>, to make
 subs call their Lisp counterpart.  However, tying Lisp variables to
 Perl variables is not quite so automatic.  In all cases, hyphens
-appearing in Lisp names are translated to underscores in Perl, and
-vice versa.
+(C<->) appearing in Lisp names are translated to underscores (C<_>) in
+Perl, and vice versa.
 
 =head2 Functions
 
@@ -616,6 +628,17 @@ Note that only globs from package C<main> may be used as Lisp symbols,
 so code that is compiled in another package must use the form
 C<\*::sym> rather than C<\*sym>.
 
+When comparing the returned values of Lisp functions to each other and
+to symbols, it is best to use the Lisp C<eq> function instead of
+Perl's equality operators.
+
+  ### PREFERRED
+  if (&eq(&type_of($x), \*::cons)) { ... }
+
+  ### PROBABLY OK
+  if (&type_of($x) eq \*::cons) { ... }
+  if (&type_of($x) == \*cons) { ... }
+
 =head2 Variables
 
 In Lisp, variables play a role akin to that of Perl scalars.  A
@@ -642,7 +665,7 @@ This sort of thing could be accomplished in Lisp as follows:
   (setq inhibit-eol-conversion 1)
 
 (but you would probably rather use C<let> instead, for which there is
-still no convenient Emacs::Lisp alternative).  See also the C<setq>
+still no convenient Emacs::Lisp equivalent).  See also the C<setq>
 function below.
 
 =head2 Property Lists
@@ -651,6 +674,9 @@ Lisp symbols all have an associated object called a plist (for
 "property list").  Although it is actually an object just like any
 other, the plist is typically used in a way vaguely resembling Perl's
 hashes.
+
+Plists are not used nearly as often as functions and variables in
+Lisp.  If you are new to Lisp, you can probably skip this section.
 
 Note that a plist is different from a Perl hash.  Lookups are not
 based on string equality as with Perl, but rather on Lisp object
@@ -712,17 +738,23 @@ that the user can invoke by typing C<M-x E<lt>function-nameE<gt>>.  A
 command may be bound to a key or sequence of keystrokes.  See the
 Emacs documentation for specifics.
 
-As in Emacs Lisp, when defining a command, you must specify the
-interactive nature of the command.  There are various codes to
-indicate that the command acts on the current region, a file name to
-be read from the minibuffer, etc.  Please see I<The Elisp Manual> for
-details.  Emacs::Lisp' C<defun> uses a value returned by
-C<interactive> as the SPEC for this purpose.  See L</interactive>.
+As explained in I<The Elisp Manual>, when defining a command, you must
+specify the interactive nature of the command.  There are various
+codes to indicate that the command acts on the current region, a file
+name to be read from the minibuffer, etc.  Please see I<The Elisp
+Manual> for details.
+
+Emacs::Lisp's C<defun> uses a SPEC returned by C<interactive> for
+specifying a command's interactivity.  If no SPEC is given, the
+function will still be callable by Lisp, but will not be available to
+the user via `C<M-x E<lt>function-nameE<gt> RET>' and cannot be bound
+to a sequence of keystrokes.  See L</interactive>.
 
 This example creates a command, C<reverse-region-words>, that replaces
 a region of text with the same text after reversing the order of
 words.  To be user-friendly, we'll provide a documentation string,
-which will be accessible through the Emacs help system (C<C-h f>).
+which will be accessible through the Emacs help system (`C<C-h f
+reverse-region-words RET>').
 
   use Emacs::Lisp;
   defun (\*reverse_region_words,
@@ -740,9 +772,13 @@ which will be accessible through the Emacs help system (C<C-h f>).
 
 =item interactive
 
-Used to generate the third (or, in the absence of a doc string,
+Used to generate the third (or, in the absence of a doc string, the
 second) argument to C<defun>, which see.  This determines how a
 command's arguments are obtained.
+
+What distinguishes a "command" from an ordinary function, in the Emacs
+parlance, is the presence of an C<interactive> specifier in the
+C<defun> expression.
 
 SPEC may be a string, as described in I<The Elisp Manual>, or a
 reference to code which returns the argument list.
@@ -763,8 +799,8 @@ this may change) of the form
     $var = EXPR;
 
 where C<$var> is a scalar variable or hash element.  Every such
-variable is imported from the Emacs::Lisp module, as if you had said
-C<use Emacs::Lisp qw($var)>.
+variable is imported from the Emacs::Lisp module as if you had said,
+`C<use Emacs::Lisp qw($var)>'.
 
 Afterwards, BLOCK is executed.  Thus, this code
 
@@ -793,20 +829,22 @@ same effect on Lisp as the above:
 
 =head1 BUGS
 
-These are some known bugs in Perlmacs and Emacs::Lisp.  See also the
-file F<BUGS> in the Perlmacs distribution.  If you find other bugs,
-please check that you have the latest version, and email me.
+These are some of the known bugs in Perlmacs and Emacs::Lisp.  See
+also the file F<BUGS> in the Perlmacs distribution.  If you find other
+bugs, please check that you have the latest version, and email me.
 
 =over 4
 
 =item * Problems with `Emacs::main'.
 
 The C<Emacs::main> sub may open an X display and not close it.  That
-is the most obvious of many problems with C<Emacs::main>.  The thing
-is, Emacs was not written with the expectation of being embedded in
-another program, least of all a language interpreter such as Perl.
-Therefore, when Emacs is told to exit, it assumes the process is
-really about to exit, and it neglects to tidy up after itself.
+is the most obvious of many problems with C<Emacs::main>.
+
+The thing is, Emacs was not written with the expectation of being
+embedded in another program, least of all a language interpreter such
+as Perl.  Therefore, when Emacs is told to exit, it believes the
+process is really about to exit, and it neglects to tidy up after
+itself.
 
 For best results, the value returned by C<Emacs::main> should be
 passed to Perl's C<exit> soon, as in this code:
@@ -818,21 +856,19 @@ passed to Perl's C<exit> soon, as in this code:
 It should.  At least, there should be an easy way to make a local
 binding of a Lisp variable in Perl.
 
-=item * Input/Output.
+=item * STDIN, STDOUT, STDERR, %ENV, %SIG, ...
 
 If Perl code tries to read from C<STDIN>, Emacs becomes unresponsive.
 This is very distressing.  Also, Perl loves to print error and warning
-messages to C<STDERR>, which can be disconcerting.  The messages
-should probably be redirected to a buffer or the minibuffer.
-
-I shudder to think what would happen if you used Perl compiled with
-B<sfio>.
-
-=item * %ENV, %SIG, `setenv'.
+messages to C<STDERR>, which can be confusing.  The messages should
+probably be redirected to a buffer or the minibuffer.
 
 Perl and Emacs use environment variables and signal handlers in
 different, incompatible ways.  This needs to be coordinated.  I've
 made a start with %ENV, but more needs to be done.
+
+These issues do not directly relate to Lisp, so I plan to create a new
+module called simply `Emacs' that will take care of them.
 
 =item * Function arg names in online documentation.
 
@@ -870,8 +906,10 @@ Perlmacs source.
 See L<perlobj/"Two-Phased Garbage Collection">.  Lisp data structures
 may be recursive (contain references to themselves) without the danger
 of a memory leak, because Lisp uses a periodic-mark-and-sweep garbage
-collector.  However, if a recursive structure involves I<any> Perl
-references, it may I<never> be destroyable.
+collector.
+
+However, if a recursive structure involves I<any> Perl references, it
+may I<never> be destroyable.
 
 For best results, Perl code should deal mainly with Perl data, and
 Lisp code should deal mainly with Lisp data.
@@ -888,9 +926,9 @@ garbage collection cycles to be freed.  (At least, that is my theory.
 I haven't verified it experimentally.)  It is therefore probably best
 to keep the number and complexity of such references to a minimum.
 
-To the extent that the Perl-to-Emacs interface is independent of the
+(To the extent that the Perl-to-Emacs interface is independent of the
 Lispish implementation of Emacs, these performance issues are fixable
-in principle by reimplementing Emacs' internals.
+in principle by reimplementing Emacs' internals.)
 
 =back
 
@@ -899,9 +937,12 @@ in principle by reimplementing Emacs' internals.
 
 =over 4
 
-=item * Special forms: let, catch, unwind-protect, etc.
+=item * Create Emacs.pm and Emacs.xs for non-Lisp-related things.
 
-=item * Better support for Lisp macros.
+These would include Emacs::main, %ENV, %SIG, the standard filehandles,
+and perhaps other builtin Perl variables.
+
+=item * Special forms: unwind-protect, let, defmacro, defvar.
 
 =item * Find a way to convert filehandles to the Emacs equivalent.
 

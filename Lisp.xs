@@ -180,6 +180,18 @@ _assignees(coderef)
 	  SPAGAIN;
 	}
 
+SV *
+lisp(sv)
+	SV *sv;
+	PROTOTYPE: $
+	CODE:
+	if (SvROK (sv))
+	  RETVAL = sv_wrap_lisp (lisp_wrap_sv (SvRV (sv)));
+	else
+	  RETVAL = sv_wrap_lisp (sv_to_lisp (sv));
+	OUTPUT:
+	RETVAL
+
 
 MODULE = Emacs::Lisp		PACKAGE = Emacs::Lisp::Object
 
@@ -214,25 +226,6 @@ to_perl(sv)
 	SV *sv;
 	PROTOTYPE: $
 	CODE:
-	if (SV_LISPP (sv))
-	  RETVAL = lisp_to_sv (XSV_LISP (sv));
-	else
-	  Perl_croak ("Not a Lisp object");
+	RETVAL = lisp_to_sv (XSV_LISP (sv));
 	OUTPUT:
 	RETVAL
-
-#if 0
-SV *
-to_lisp(sv)
-	SV *sv;
-	PROTOTYPE: $
-	CODE:
-	/* XXX is this useful?  will it ever be? */
-	if (SV_LISPP (sv))  /* XXX overhead. needed? */
-	  RETVAL = sv;
-	else
-	  RETVAL = sv_wrap_lisp (lisp_wrap_sv (sv));
-	OUTPUT:
-	RETVAL
-
-#endif

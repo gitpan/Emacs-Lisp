@@ -7,15 +7,36 @@
 sub setq (&);
 sub save_excursion (&);
 sub t ();	# prevents a core dump, at least w/ 5.004_03 + MULTIPLICITY
+sub lisp ($);
+
+# Avoid warning "used only once":
+*integer = *integer;
+*perl_scalar = *perl_scalar;
+*cons = *cons;
+*perl_array = *perl_array;
 
 BEGIN {
   @tests =
     (
+     sub {
+       $x = 1;
+       save_excursion {
+	 &set_buffer (&get_buffer_create ("b1"));
+	 save_excursion {
+	   &set_buffer (&get_buffer_create ("b2"));
+	   $x++ unless &eq (&current_buffer(), &get_buffer("b1"));
+	 };
+	 $x++ if &eq (&current_buffer(), &get_buffer("b1"));
+       } == 2 && $x == 3;
+     },
      sub { &eq (1, 1) },
      sub { ! &eq (1, "1") },
      sub { &eq (&intern("foo"), \*::foo) },
-#     sub { &eq (&Emacs::Lisp::Object::to_lisp (\*foo), \*foo) },
-
+     sub { &type_of (1) eq \*::integer },
+     sub { &type_of (\1) eq \*::perl_scalar },
+     sub { &type_of ([1]) eq \*::cons },
+     sub { &type_of (lisp [1]) eq \*::perl_array },
+#sub { my $x = lisp [1]; $$x = 100; warn "\$\$x: $$x" },
      sub {
        import Emacs::Lisp '$foo';
        &set (\*foo, 3);

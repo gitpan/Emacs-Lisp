@@ -1,5 +1,5 @@
 README for Perl module Emacs::Lisp
-last updated: 9 Mar 1999
+last updated: 10 Mar 1999
 
 ##################################################################
 ###### CAUTION ###### CAUTION ###### CAUTION ###### CAUTION ######
@@ -28,7 +28,7 @@ which versions of the various packages work together:
        0.71	20.2	5.004	0.6.2
        0.75	20.3	5.004	0.6.2.2
        0.80  	20.3	5.005	0.7.1
-       0.83  	20.3	5.005	0.8
+       0.84  	20.3	5.005	0.8
 
 
 WHY
