@@ -89,3 +89,7 @@ tests.
 0.89  Sat Mar 20 14:27:04 EST 1999
 	Compile closures in package main so \*foo works within
 &lisp_functions().
+
+0.90  Sun Mar 28 19:39:53 EST 1999
+	Make guesses about lambda lists based on prototype and @_
+assignment.

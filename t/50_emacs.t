@@ -33,4 +33,6 @@
 	    test-number))
    (setq test-number (1+ test-number)))
  tests)
+
+(garbage-collect)
 (kill-emacs)

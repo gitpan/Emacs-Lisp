@@ -1,16 +1,5 @@
 README for Perl module Emacs::Lisp
-last updated: 20 Mar 1999
-
-##################################################################
-###### CAUTION ###### CAUTION ###### CAUTION ###### CAUTION ######
-##################################################################
-#######                                                    #######
-#######   THIS IS BETA SOFTWARE.  USE AT YOUR OWN RISK!    #######
-#######   NOT RESPONSIBLE FOR CRASHES OR LOST DATA!!!!!!!  #######
-#######                                                    #######
-##################################################################
-###### CAUTION ###### CAUTION ###### CAUTION ###### CAUTION ######
-##################################################################
+last updated: 28 Mar 1999
 
 
 WHAT
@@ -28,86 +17,40 @@ which versions of the various packages work together:
        0.71	20.2	5.004	0.6.2
        0.75	20.3	5.004	0.6.2.2
        0.80  	20.3	5.005	0.7.1
-       0.84  	20.3	5.005	0.8
-       0.88+ 	20.3	5.005	0.9+
+       0.88+ 	20.3	5.005	0.9.1+
 
 
 WHY
 ---
 The intent is to allow Emacs modules and customization code to be
-written in Perl, as well as Emacs Lisp.  Because we can.  :-)
+written in Perl, and to give Emacs Lisp access to Perl.
 
-Actually, my motives have mostly to do with becoming a better
-programmer, familiarizing myself with Perl and Emacs and indulging my
-fascination with language translation.  See
+My motives have mostly to do with becoming a better programmer,
+familiarizing myself with Perl and Emacs, and indulging my fascination
+with language translation.  See
 http://www.tux.org/~niemi/opensource/developer-motivation.html for a
 nice explanation by David Niemi.
 
-As for why anyone would want to install Perlmacs, your guess is as
-good as mine.  One brave soul emailed me to say that he had made
-Perlmacs "a very important tool" for his y2k consulting work.  You can
-see his code at http://john-edwin-tobey.org/perlmacs/.
+As to why anyone would want to install Perlmacs, your guess is as good
+as mine.  :-) One person emailed me to say that he had made Perlmacs
+"a very important tool" for his y2k consulting work.  You can see his
+code at http://john-edwin-tobey.org/perlmacs/.
 
 
 HOW
 ---
-You must first install PERL VERSION 5.005 or higher.
+This module does not work with ordinary Perl, you need to install
+Perlmacs.  Follow the instructions in the Emacs::PerlmacsPatch module,
+available in the same places as this module.
 
-Your Perl must have working ExtUtils::Embed capabilities.  If not,
-`configure' will exclude Perl support, and you will have something
-close to standard GNU Emacs.  If you are unsure about this, watch the
-messages printed by `configure'.  If they say that Perl is embeddable,
-good.  If not, make sure your Perl is at least version 5.005.  If it
-is, have a peek at the generated config.log file for clues, and mail
-me any workarounds.
+For programming Emacs (with or without Emacs::Lisp), I recommend The
+Elisp Manual, which you can get from one of these places:
 
-Retrieve the Emacs 20.3 distribution from a location such as one of
-these:
+  ftp://metalab.unc.edu/pub/gnu/emacs/elisp-manual-20-2.5.tar.gz
+  ftp://ftp.gnu.org/pub/gnu/emacs/elisp-manual-20-2.5.tar.gz
 
-   ftp://ftp.gnu.org/pub/gnu/emacs/emacs-20.3.tar.gz
-   ftp://metalab.unc.edu/pub/gnu/emacs/emacs-20.3.tar.gz
-
-You may want to grab the Elisp Manual, elisp-manual-20-2.5.tar.gz,
-while you're there.  (At this time, knowledge of Elisp is very helpful
-for programming with Emacs::Lisp.)
-
-Retrieve the latest Perlmacs patch from one of these locations:
-
-   http://www.perl.com/CPAN/authors/id/JTOBEY/emacs-20.3-perlmacs-*.pl.gz
-   http://john-edwin-tobey.org/perlmacs/src/emacs-20.3-perlmacs-*.pl.gz
-
-(Substitute the apporpriate version number for `*'.)  Then do
-
-   gzip -dc emacs-20.3.tar.gz |tar xf -
-   cd emacs-20.3
-   gzip -dc ../emacs-20.3-perlmacs-*.pl.gz |perl
-
-Have a look at the patched README file for further information.  The
-basic procedure should be familiar:
-
-   ./configure
-   make
-   make install
-
-This will, by default, install the program in /usr/local/bin under the
-names `pmacs' and `perlmacs'.  The program can parse its command line
-as either Perl or Emacs would, depending on whether "perl" appears in
-its name.  (Using `--perl' or `--emacs' as the first arg overrides
-this.)
-
-(If you want, you *could* install it as `perl' and `emacs' with
-probably no ill effects other than slower startup, but there would be
-a possibility of nastiness due to Emacs' unclean C namespace.)
-
-If you wish to use an installed version of perl other than the one
-that's in your $PATH, set the environment variable $PERL to the
-desired program when running configure.  For example, under bash or
-sh:
-
-   PERL=perl5.00502 ./configure
-
-Next, build the Emacs::Lisp module in the usual way, but use perlmacs
-in place of perl.
+To build the Emacs::Lisp module, perform the usual module-building
+incantation, but use perlmacs in place of perl, like this:
 
    gzip -dc Emacs-Lisp-*.tar.gz |tar xf -
    cd Emacs-Lisp-*

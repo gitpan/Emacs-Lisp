@@ -28,15 +28,9 @@ use Emacs::Lisp;
      },
      sub { "@{Emacs::Lisp->can('list')->(5,2)}" eq "5 2" },
      sub { "@{Emacs::Lisp::Object->can('list')->(3,4)->to_perl}" eq "3 4" },
-    );
-if (defined &Emacs::constant) {
-    # added in Perlmacs 0.10
-    push @tests,
-    (
      sub { &aref (\ [8, 7, 6], 2) == 6 },
      sub { $#${&make_vector (5, undef)} == 4 },
     );
-}
 
 print "1..".@tests."\n";
 $test_number = 1;
@@ -44,3 +38,4 @@ for my $test (@tests) {
   print (&$test() ? "ok $test_number\n" : "not ok $test_number\n");
   $test_number ++;
 }
+END { &garbage_collect; }

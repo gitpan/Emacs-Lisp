@@ -8,3 +8,4 @@ print "ok 1\n";
 
 unless (&eq (1, 1)) { print "not " }
 print "ok 2\n";
+&garbage_collect;

@@ -11,7 +11,7 @@ use Emacs::Lisp;
      },
 
      sub {
-       setq { $zab{\*rab} = 'oof' };
+       setq { for (0..1) { $zab{\*rab} = 'oof' } };
        &get (\*zab, \*rab) eq 'oof';
      },
 
@@ -39,3 +39,4 @@ for my $test (@tests) {
   print (&$test() ? "ok $test_number\n" : "not ok $test_number\n");
   $test_number ++;
 }
+END { &garbage_collect; }

@@ -25,66 +25,6 @@
 #include <emacs/perlmacs.h>
 
 
-/* Try to ferret out the variables that get assigned to in a coderef.
-   We only bother with simple top-level assignments and chains such as
-
-      $foo = $bar = 0;
-
-   not things like $baz in  $foo[$baz=4] = 7 .  Currently, we're only
-   looking for scalars and hash elements.  */
-/* FIXME: Replace with Perl code that uses B.  */
-static void
-push_op_assignees (startop)
-     OP *startop;
-{
-  dSP;
-  OP *op0, *op1, *op2, *op3;
-  GV *gv;
-  SV *sv;
-  char *prefix;
-
-  if (! (startop && (startop->op_flags & OPf_KIDS)))
-    return;
-
-  for (op0 = ((UNOP *) startop)->op_first; op0; op0 = op0->op_sibling) {
-    if (op0->op_type == OP_SASSIGN) {
-      PUTBACK;
-      push_op_assignees(op0);
-      SPAGAIN;
-      if ((op0->op_flags & OPf_KIDS) && ((UNOP *) op0)->op_first) {
-
-	op1 = ((UNOP *) op0)->op_first->op_sibling;
-	if (op1 && op1->op_type == OP_NULL && (op1->op_flags & OPf_KIDS))
-	  op1 = ((UNOP *) op1)->op_first;
-	if (! op1)
-	  continue;
-
-	if (op1->op_type == OP_GVSV && (gv = ((GVOP *)op1)->op_gv))
-	  prefix = "$";
-	else if (op1->op_type == OP_HELEM
-		 && (op1->op_flags & OPf_KIDS)
-		 && (op2 = ((UNOP *) op1)->op_first)
-		 && op2->op_type == OP_RV2HV
-		 && (op2->op_flags & OPf_KIDS)
-		 && (op3 = ((UNOP *) op2)->op_first)
-		 && op3->op_type == OP_GV
-		 && (gv = ((GVOP *)op3)->op_gv))
-	  {
-	    prefix = "%";
-	  }
-	else
-	  continue;
-
-	sv = newSV (0);
-	gv_fullname3 (sv, gv, prefix);
-	XPUSHs (sv_2mortal (sv));
-      }
-    }
-  }
-  PUTBACK;
-}
-
-
 MODULE = Emacs::Lisp		PACKAGE = Emacs::Lisp
 
 BOOT:
@@ -110,29 +50,6 @@ funcall(...)
 	}
 	OUTPUT:
 	RETVAL
-
-void
-_assignees(coderef)
-	SV *	coderef;
-	PROTOTYPE: &
-	PPCODE:
-	{
-	  SV *rv;
-	  OP *root;
-
-	  /* Paranoid typechecking here.  */
-	  if (! (SvROK(coderef) && (rv = SvRV(coderef))
-		 && SvTYPE(rv) == SVt_PVCV && (root = CvROOT(rv))
-		 && ((UNOP *) root)->op_type == OP_LEAVESUB
-		 && (root->op_flags & OPf_KIDS)))
-	    {
-	      XSRETURN_EMPTY;
-	    }
-
-	  PUTBACK;
-	  push_op_assignees(((UNOP *) root)->op_first);
-	  SPAGAIN;
-	}
 
 SV *
 lisp(sv)

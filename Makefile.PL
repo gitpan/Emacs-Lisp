@@ -1,9 +1,10 @@
 use ExtUtils::MakeMaker;
 
 use strict;
-my ($perlmacs_ver, @include_dirs, $required_ver);
+my ($perlmacs_ver, @include_dirs, $required_ver, $required_ver_for_test);
 
 $required_ver = '0.9';
+$required_ver_for_test = '0.11';
 
 $| = 1;
 
@@ -37,28 +38,41 @@ If you do not have Perlmacs, see the file README.
 DEAD
 }
 
-sub check_perlmacs_version {
-    my (@wanted, @got, $sign);
-
-    @wanted = split /\./, $required_ver;
-    @got = split /\./, $perlmacs_ver;
-    while (1) {
-	if (!@wanted && !@got) {
-	    $sign = 0; last;
-	} elsif ($wanted[0] ne $got[0]) {
-	    $sign = $got[0] <=> $wanted[0]; last;
-	} else {
-	    shift @wanted; shift @got;
-	}
+sub compare_versions {
+  my ($ver1, $ver2) = @_;
+  my @ver1 = split /\./, $ver1;
+  my @ver2 = split /\./, $ver2;
+  while (1) {
+    if (!@ver1 && !@ver2) {
+      return 0;
+    } elsif ($ver1[0] != $ver2[0]) {
+      return $ver2[0] <=> $ver1[0];
+    } else {
+      shift @ver1; shift @ver2;
     }
+  }
+}
+
+sub check_perlmacs_version {
+    my ($sign);
+
+    if (compare_versions ($required_ver_for_test, $perlmacs_ver) < 0) {
+      print <<END; }
+
+Your Perlmacs (version $perlmacs_ver) may be new enough to work with this
+Emacs::Lisp, but it is too old to pass the test suite.  You will have
+to upgrade to Perlmacs $required_ver_for_test if you want to run `make test'.
+END
+
+    $sign = compare_versions ($required_ver, $perlmacs_ver);
     if ($sign == 0 && $perlmacs_ver =~ /pre/) {
-	print <<END;
+	print <<END; }
 
 I see you are using a pre-release.  If you have any problems with this
 module, please upgrade to at least Perlmacs $required_ver.  End of sermon.
 
 END
-    }
+
     return if ($sign >= 0);
 
     die <<DEAD;
