@@ -19,7 +19,7 @@ Perlmacs is a patch of GNU Emacs.  It creates a program that has all
 the functionality of both Perl and Emacs.  The Emacs::Lisp module
 allows Perl code to call functions and access variables of Lisp.
 
-This release (Emacs::Lisp 0.72) is just version 0.71 updated for use
+This release (Emacs::Lisp 0.74) is just version 0.71 updated for use
 with Emacs 20.3.  You can't use it with a Perlmacs built from Emacs
 20.2, and you should not use earlier versions of Emacs::Lisp (<=0.71)
 with Emacs 20.3.  (They might seem to work, but they will crash or
@@ -28,8 +28,8 @@ behave unpredictably.)  To summarize the version dependencies:
    Emacs::Lisp	Emacs	Perl	Perlmacs
    ===========  =====   ====    ========
        0.71	20.2	5.004	0.6.2
-       0.72	20.3	5.004	0.6.2.2
-       0.73	20.3	5.005	0.7
+       0.74	20.3	5.004	0.6.2.2
+       0.75	20.3	5.005	0.7
 
 
 WHY
